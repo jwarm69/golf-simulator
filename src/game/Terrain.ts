@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { PhysicsWorld } from '../core/PhysicsWorld';
-import { CourseData, ZoneData, ObstacleData, ZoneType, ZONE_COLORS, BALL_RADIUS } from '../types';
+import {
+  CourseData, ZoneData, ObstacleData, ZoneType,
+  THEME_CONFIGS, CourseTheme, ThemeConfig,
+} from '../types';
 
 interface ZoneBounds {
   type: ZoneType;
@@ -17,6 +20,8 @@ export class Terrain {
   private meshes: THREE.Mesh[] = [];
   private bodies: CANNON.Body[] = [];
   private zoneBounds: ZoneBounds[] = [];
+  private sponsorMeshes: THREE.Object3D[] = [];
+  private currentThemeConfig: ThemeConfig = THEME_CONFIGS.meadow;
 
   constructor(scene: THREE.Scene, physics: PhysicsWorld) {
     this.scene = scene;
@@ -26,10 +31,13 @@ export class Terrain {
   buildFromCourse(course: CourseData) {
     this.clear();
 
+    const theme: CourseTheme = course.theme ?? 'meadow';
+    this.currentThemeConfig = THEME_CONFIGS[theme];
+
     // Large base ground plane (rough)
     const baseGeo = new THREE.PlaneGeometry(200, 200);
     const baseMat = new THREE.MeshStandardMaterial({
-      color: ZONE_COLORS.rough,
+      color: this.currentThemeConfig.groundColor,
       roughness: 0.9,
     });
     const baseMesh = new THREE.Mesh(baseGeo, baseMat);
@@ -48,10 +56,15 @@ export class Terrain {
     for (const obstacle of course.obstacles) {
       this.addObstacle(obstacle);
     }
+
+    // Build sponsor billboards
+    if (course.sponsor) {
+      this.addSponsorBillboards(course);
+    }
   }
 
   private addZone(zone: ZoneData) {
-    const color = ZONE_COLORS[zone.type] ?? ZONE_COLORS.rough;
+    const color = this.currentThemeConfig.zoneColors[zone.type] ?? this.currentThemeConfig.groundColor;
     const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.8 });
 
     let mesh: THREE.Mesh;
@@ -84,15 +97,16 @@ export class Terrain {
   }
 
   private addObstacle(obstacle: ObstacleData) {
-    if (obstacle.type === 'tree') {
-      this.addTree(obstacle.position);
-    } else if (obstacle.type === 'rock') {
-      this.addRock(obstacle.position);
+    switch (obstacle.type) {
+      case 'tree': this.addTree(obstacle.position); break;
+      case 'rock': this.addRock(obstacle.position); break;
+      case 'cactus': this.addCactus(obstacle.position); break;
+      case 'ice_rock': this.addIceRock(obstacle.position); break;
+      case 'snow_tree': this.addSnowTree(obstacle.position); break;
     }
   }
 
   private addTree(pos: { x: number; y: number; z: number }) {
-    // Trunk
     const trunkGeo = new THREE.CylinderGeometry(0.15, 0.2, 2, 8);
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.9 });
     const trunk = new THREE.Mesh(trunkGeo, trunkMat);
@@ -101,7 +115,6 @@ export class Terrain {
     this.scene.add(trunk);
     this.meshes.push(trunk);
 
-    // Foliage
     const foliageGeo = new THREE.ConeGeometry(1.5, 3, 8);
     const foliageMat = new THREE.MeshStandardMaterial({ color: 0x2d5a1e, roughness: 0.8 });
     const foliage = new THREE.Mesh(foliageGeo, foliageMat);
@@ -110,7 +123,6 @@ export class Terrain {
     this.scene.add(foliage);
     this.meshes.push(foliage);
 
-    // Physics body (simple cylinder)
     const treeBody = new CANNON.Body({ mass: 0 });
     treeBody.addShape(new CANNON.Cylinder(0.3, 0.3, 4, 8));
     treeBody.position.set(pos.x, 2, pos.z);
@@ -134,8 +146,221 @@ export class Terrain {
     this.bodies.push(rockBody);
   }
 
+  private addCactus(pos: { x: number; y: number; z: number }) {
+    // Main trunk - tall green cylinder
+    const trunkGeo = new THREE.CylinderGeometry(0.2, 0.25, 3, 8);
+    const cactusMat = new THREE.MeshStandardMaterial({ color: 0x2d6b2d, roughness: 0.7 });
+    const trunk = new THREE.Mesh(trunkGeo, cactusMat);
+    trunk.position.set(pos.x, 1.5, pos.z);
+    trunk.castShadow = true;
+    this.scene.add(trunk);
+    this.meshes.push(trunk);
+
+    // Left arm
+    const armGeo = new THREE.CylinderGeometry(0.12, 0.15, 1.2, 8);
+    const leftArm = new THREE.Mesh(armGeo, cactusMat);
+    leftArm.position.set(pos.x - 0.5, 2.2, pos.z);
+    leftArm.rotation.z = Math.PI / 4;
+    leftArm.castShadow = true;
+    this.scene.add(leftArm);
+    this.meshes.push(leftArm);
+
+    // Right arm
+    const rightArm = new THREE.Mesh(armGeo, cactusMat);
+    rightArm.position.set(pos.x + 0.5, 1.8, pos.z);
+    rightArm.rotation.z = -Math.PI / 4;
+    rightArm.castShadow = true;
+    this.scene.add(rightArm);
+    this.meshes.push(rightArm);
+
+    // Physics body
+    const cactusBody = new CANNON.Body({ mass: 0 });
+    cactusBody.addShape(new CANNON.Cylinder(0.35, 0.35, 3, 8));
+    cactusBody.position.set(pos.x, 1.5, pos.z);
+    this.physics.addBody(cactusBody);
+    this.bodies.push(cactusBody);
+  }
+
+  private addIceRock(pos: { x: number; y: number; z: number }) {
+    // Translucent icy rock formation
+    const rockGeo = new THREE.DodecahedronGeometry(0.8, 1);
+    const rockMat = new THREE.MeshStandardMaterial({
+      color: 0x88c8e8,
+      roughness: 0.2,
+      metalness: 0.3,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const rock = new THREE.Mesh(rockGeo, rockMat);
+    rock.position.set(pos.x, 0.5, pos.z);
+    rock.castShadow = true;
+    this.scene.add(rock);
+    this.meshes.push(rock);
+
+    const rockBody = new CANNON.Body({ mass: 0 });
+    rockBody.addShape(new CANNON.Sphere(0.8));
+    rockBody.position.set(pos.x, 0.5, pos.z);
+    this.physics.addBody(rockBody);
+    this.bodies.push(rockBody);
+  }
+
+  private addSnowTree(pos: { x: number; y: number; z: number }) {
+    // Dark trunk
+    const trunkGeo = new THREE.CylinderGeometry(0.15, 0.2, 2, 8);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.9 });
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.set(pos.x, 1, pos.z);
+    trunk.castShadow = true;
+    this.scene.add(trunk);
+    this.meshes.push(trunk);
+
+    // Snow-covered foliage (white-tinted cone)
+    const foliageGeo = new THREE.ConeGeometry(1.5, 3, 8);
+    const foliageMat = new THREE.MeshStandardMaterial({ color: 0xc8dcc8, roughness: 0.8 });
+    const foliage = new THREE.Mesh(foliageGeo, foliageMat);
+    foliage.position.set(pos.x, 3.5, pos.z);
+    foliage.castShadow = true;
+    this.scene.add(foliage);
+    this.meshes.push(foliage);
+
+    // Snow cap on top
+    const snowGeo = new THREE.ConeGeometry(1.0, 1.0, 8);
+    const snowMat = new THREE.MeshStandardMaterial({ color: 0xf0f0ff, roughness: 0.6 });
+    const snow = new THREE.Mesh(snowGeo, snowMat);
+    snow.position.set(pos.x, 4.5, pos.z);
+    snow.castShadow = true;
+    this.scene.add(snow);
+    this.meshes.push(snow);
+
+    const treeBody = new CANNON.Body({ mass: 0 });
+    treeBody.addShape(new CANNON.Cylinder(0.3, 0.3, 4, 8));
+    treeBody.position.set(pos.x, 2, pos.z);
+    this.physics.addBody(treeBody);
+    this.bodies.push(treeBody);
+  }
+
+  private addSponsorBillboards(course: CourseData) {
+    const sponsor = course.sponsor!;
+    const primaryColor = new THREE.Color(sponsor.primaryColor);
+    const secondaryColor = new THREE.Color(sponsor.secondaryColor ?? '#ffffff');
+
+    // Billboard positions: one near tee, one along fairway midpoint
+    const midX = (course.tee.x + course.hole.x) / 2;
+    const midZ = (course.tee.z + course.hole.z) / 2;
+
+    const billboardPositions = [
+      { x: course.tee.x + 8, z: course.tee.z, rotY: -Math.PI / 4 },
+      { x: midX - 10, z: midZ, rotY: Math.PI / 6 },
+    ];
+
+    for (const bp of billboardPositions) {
+      const group = new THREE.Group();
+
+      // Billboard backing panel
+      const panelGeo = new THREE.BoxGeometry(5, 2.5, 0.15);
+      const panelMat = new THREE.MeshStandardMaterial({
+        color: primaryColor,
+        roughness: 0.4,
+        metalness: 0.1,
+      });
+      const panel = new THREE.Mesh(panelGeo, panelMat);
+      panel.position.y = 3.5;
+      panel.castShadow = true;
+      group.add(panel);
+
+      // Border frame
+      const borderGeo = new THREE.BoxGeometry(5.2, 2.7, 0.1);
+      const borderMat = new THREE.MeshStandardMaterial({
+        color: secondaryColor,
+        roughness: 0.3,
+        metalness: 0.2,
+      });
+      const border = new THREE.Mesh(borderGeo, borderMat);
+      border.position.y = 3.5;
+      border.position.z = -0.05;
+      group.add(border);
+
+      // Support poles
+      const poleGeo = new THREE.CylinderGeometry(0.08, 0.08, 4.75, 8);
+      const poleMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.5, metalness: 0.5 });
+
+      const leftPole = new THREE.Mesh(poleGeo, poleMat);
+      leftPole.position.set(-2, 2.375, 0);
+      leftPole.castShadow = true;
+      group.add(leftPole);
+
+      const rightPole = new THREE.Mesh(poleGeo, poleMat);
+      rightPole.position.set(2, 2.375, 0);
+      rightPole.castShadow = true;
+      group.add(rightPole);
+
+      // Sponsor text rendered on a canvas texture
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d')!;
+
+      // Background
+      ctx.fillStyle = sponsor.primaryColor;
+      ctx.fillRect(0, 0, 512, 256);
+
+      // "SPONSORED BY" text
+      ctx.fillStyle = sponsor.secondaryColor ?? '#ffffff';
+      ctx.font = 'bold 28px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('SPONSORED BY', 256, 30);
+
+      // Sponsor name
+      ctx.font = 'bold 52px Arial, sans-serif';
+      ctx.fillText(sponsor.name, 256, 80);
+
+      // Tagline
+      if (sponsor.tagline) {
+        ctx.font = '24px Arial, sans-serif';
+        ctx.fillText(sponsor.tagline, 256, 150);
+      }
+
+      // Tier badge
+      const tierLabels = { hole: 'HOLE SPONSOR', course: 'COURSE SPONSOR', designer: 'HOLE DESIGNER' };
+      ctx.font = 'bold 20px Arial, sans-serif';
+      const tierLabel = tierLabels[sponsor.tier];
+      const tierWidth = ctx.measureText(tierLabel).width + 20;
+      ctx.fillStyle = sponsor.secondaryColor ?? '#ffffff';
+      ctx.fillRect(256 - tierWidth / 2, 200, tierWidth, 30);
+      ctx.fillStyle = sponsor.primaryColor;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tierLabel, 256, 215);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const textGeo = new THREE.PlaneGeometry(4.6, 2.3);
+      const textMat = new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: 0.5,
+      });
+      const textMesh = new THREE.Mesh(textGeo, textMat);
+      textMesh.position.y = 3.5;
+      textMesh.position.z = 0.08;
+      group.add(textMesh);
+
+      group.position.set(bp.x, 0, bp.z);
+      group.rotation.y = bp.rotY;
+
+      this.scene.add(group);
+      this.sponsorMeshes.push(group);
+
+      // Physics body for billboard poles
+      const billboardBody = new CANNON.Body({ mass: 0 });
+      billboardBody.addShape(new CANNON.Box(new CANNON.Vec3(0.1, 2.4, 0.1)), new CANNON.Vec3(-2, 2.4, 0));
+      billboardBody.addShape(new CANNON.Box(new CANNON.Vec3(0.1, 2.4, 0.1)), new CANNON.Vec3(2, 2.4, 0));
+      billboardBody.position.set(bp.x, 0, bp.z);
+      billboardBody.quaternion.setFromEuler(0, bp.rotY, 0);
+      this.physics.addBody(billboardBody);
+      this.bodies.push(billboardBody);
+    }
+  }
+
   getZoneAtPosition(x: number, z: number): ZoneType {
-    // Check zones in reverse order (last added = on top)
     for (let i = this.zoneBounds.length - 1; i >= 0; i--) {
       const zb = this.zoneBounds[i];
       if (zb.shape === 'rect' && zb.size) {
@@ -166,11 +391,23 @@ export class Terrain {
       mesh.geometry.dispose();
       (mesh.material as THREE.Material).dispose();
     }
+    for (const obj of this.sponsorMeshes) {
+      this.scene.remove(obj);
+      obj.traverse((child: THREE.Object3D) => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+          if (child.material instanceof THREE.Material) {
+            child.material.dispose();
+          }
+        }
+      });
+    }
     for (const body of this.bodies) {
       this.physics.removeBody(body);
     }
     this.meshes = [];
     this.bodies = [];
     this.zoneBounds = [];
+    this.sponsorMeshes = [];
   }
 }

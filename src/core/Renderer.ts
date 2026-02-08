@@ -1,9 +1,14 @@
 import * as THREE from 'three';
+import { ThemeConfig } from '../types';
 
 export class Renderer {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
+
+  private hemiLight!: THREE.HemisphereLight;
+  private dirLight!: THREE.DirectionalLight;
+  private ambientLight!: THREE.AmbientLight;
 
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene();
@@ -31,24 +36,33 @@ export class Renderer {
   }
 
   private setupLighting() {
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d6e3f, 0.6);
-    this.scene.add(hemiLight);
+    this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d6e3f, 0.6);
+    this.scene.add(this.hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-    dirLight.position.set(30, 50, 20);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.camera.near = 0.5;
-    dirLight.shadow.camera.far = 150;
-    dirLight.shadow.camera.left = -60;
-    dirLight.shadow.camera.right = 60;
-    dirLight.shadow.camera.top = 60;
-    dirLight.shadow.camera.bottom = -60;
-    this.scene.add(dirLight);
+    this.dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    this.dirLight.position.set(30, 50, 20);
+    this.dirLight.castShadow = true;
+    this.dirLight.shadow.mapSize.width = 2048;
+    this.dirLight.shadow.mapSize.height = 2048;
+    this.dirLight.shadow.camera.near = 0.5;
+    this.dirLight.shadow.camera.far = 150;
+    this.dirLight.shadow.camera.left = -60;
+    this.dirLight.shadow.camera.right = 60;
+    this.dirLight.shadow.camera.top = 60;
+    this.dirLight.shadow.camera.bottom = -60;
+    this.scene.add(this.dirLight);
 
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
-    this.scene.add(ambientLight);
+    this.ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+    this.scene.add(this.ambientLight);
+  }
+
+  applyTheme(config: ThemeConfig) {
+    this.scene.background = new THREE.Color(config.skyColor);
+    (this.scene.fog as THREE.Fog).color.set(config.fogColor);
+
+    this.dirLight.intensity = config.sunIntensity;
+    this.dirLight.color.set(config.sunColor);
+    this.ambientLight.intensity = config.ambientIntensity;
   }
 
   private onResize() {

@@ -12,6 +12,10 @@ export class CourseLoader {
     return data as CourseData;
   }
 
+  async loadMultiple(paths: string[]): Promise<CourseData[]> {
+    return Promise.all(paths.map(p => this.load(p)));
+  }
+
   private validate(data: unknown) {
     if (!data || typeof data !== 'object') {
       throw new Error('Course data must be an object');

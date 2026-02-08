@@ -9,7 +9,10 @@ import { ShotController } from '../game/ShotController';
 import { TrajectoryPreview } from '../game/TrajectoryPreview';
 import { CourseLoader } from '../game/CourseLoader';
 import { HUD } from '../ui/HUD';
-import { GameState, CourseData, BALL_RADIUS, ZONE_PHYSICS, CLUBS, DEFAULT_CLUB_INDEX, ClubData } from '../types';
+import {
+  GameState, CourseData, BALL_RADIUS, ZONE_PHYSICS, CLUBS,
+  DEFAULT_CLUB_INDEX, ClubData, THEME_CONFIGS, CourseTheme,
+} from '../types';
 
 export class Game {
   private renderer: Renderer;
@@ -32,8 +35,11 @@ export class Game {
   private clubIndex = DEFAULT_CLUB_INDEX;
   private currentClub: ClubData = CLUBS[DEFAULT_CLUB_INDEX];
 
-  // Scorecard
+  // Multi-hole state
+  private holes: CourseData[] = [];
+  private currentHoleIndex = 0;
   private scorecard: number[] = [];
+  private holePars: number[] = [];
 
   // Trajectory preview
   private trajectoryPreview: TrajectoryPreview;
@@ -63,19 +69,45 @@ export class Game {
   }
 
   async loadCourse(path: string) {
-    this.course = await this.courseLoader.load(path);
-    this.terrain.buildFromCourse(this.course);
-    this.holePin.place(this.course.hole.x, this.course.hole.z);
+    const course = await this.courseLoader.load(path);
+    this.holes = [course];
+    this.currentHoleIndex = 0;
+    this.scorecard = [];
+    this.holePars = [course.par];
+    this.setupHole(course);
+  }
+
+  async loadCourses(paths: string[]) {
+    this.holes = await this.courseLoader.loadMultiple(paths);
+    this.currentHoleIndex = 0;
+    this.scorecard = [];
+    this.holePars = this.holes.map(h => h.par);
+    this.setupHole(this.holes[0]);
+  }
+
+  private setupHole(course: CourseData) {
+    this.course = course;
+
+    // Apply theme
+    const theme: CourseTheme = course.theme ?? 'meadow';
+    this.renderer.applyTheme(THEME_CONFIGS[theme]);
+
+    // Build terrain
+    this.terrain.buildFromCourse(course);
+    this.holePin.place(course.hole.x, course.hole.z);
 
     // Place ball at tee
-    this.ball.setPosition(this.course.tee.x, BALL_RADIUS + 0.01, this.course.tee.z);
+    this.ball.setPosition(course.tee.x, BALL_RADIUS + 0.01, course.tee.z);
 
     // Setup HUD
-    this.hud.setHoleName(this.course.name);
+    this.hud.setHoleName(course.name);
     this.shotCount = 0;
-    this.hud.setShotInfo(this.shotCount, this.course.par);
+    this.hud.setShotInfo(this.shotCount, course.par);
+    this.hud.setHoleProgress(this.currentHoleIndex + 1, this.holes.length);
+    this.hud.setSponsor(course.sponsor);
 
     // Init default club display
+    this.clubIndex = DEFAULT_CLUB_INDEX;
     this.cycleClub(0);
 
     // Camera initial position
@@ -259,43 +291,60 @@ export class Game {
     else label = `+${diff}`;
 
     this.scorecard.push(this.shotCount);
-    this.hud.setScorecard(this.scorecard, par);
+    this.hud.setScorecard(this.scorecard, this.holePars);
 
-    this.hud.showMessage(label, `${this.shotCount} shot${this.shotCount > 1 ? 's' : ''} on a Par ${par}`);
+    const hasNextHole = this.currentHoleIndex < this.holes.length - 1;
+
+    if (hasNextHole) {
+      this.hud.showMessage(label, `${this.shotCount} shot${this.shotCount > 1 ? 's' : ''} on a Par ${par}<br>Click for next hole`);
+    } else if (this.holes.length > 1) {
+      // Final hole - show total score
+      const totalStrokes = this.scorecard.reduce((a, b) => a + b, 0);
+      const totalPar = this.holePars.reduce((a, b) => a + b, 0);
+      const totalDiff = totalStrokes - totalPar;
+      const totalLabel = totalDiff === 0 ? 'Even' : (totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`);
+      this.hud.showMessage(
+        label,
+        `${this.shotCount} shot${this.shotCount > 1 ? 's' : ''} on a Par ${par}<br>Round complete! Total: ${totalStrokes} (${totalLabel})<br>Click to play again`
+      );
+    } else {
+      this.hud.showMessage(label, `${this.shotCount} shot${this.shotCount > 1 ? 's' : ''} on a Par ${par}<br>Click to play again`);
+    }
+
     this.hud.showAimHint(false);
 
-    // Allow restart after delay
+    // Allow advancement after delay
     setTimeout(() => {
-      this.hud.showMessage(label, `${this.shotCount} shots on a Par ${par}<br>Click to play again`);
-
       const onClick = () => {
         window.removeEventListener('click', onClick);
-        this.restart();
+        if (hasNextHole) {
+          this.advanceToNextHole();
+        } else {
+          this.restartRound();
+        }
       };
       window.addEventListener('click', onClick);
     }, 2000);
   }
 
-  private restart() {
-    if (!this.course) return;
-    this.ball.setPosition(this.course.tee.x, BALL_RADIUS + 0.01, this.course.tee.z);
-    this.shotCount = 0;
-    this.hud.setShotInfo(0, this.course.par);
-    this.hud.hideMessage();
-    this.clubIndex = DEFAULT_CLUB_INDEX;
-    this.cycleClub(0);
-    this.state = 'aiming';
-    this.cameraController.setMode('aim');
+  private advanceToNextHole() {
+    this.currentHoleIndex++;
+    this.holePin.clear();
+    this.setupHole(this.holes[this.currentHoleIndex]);
+  }
+
+  private restartRound() {
+    this.currentHoleIndex = 0;
+    this.scorecard = [];
+    this.holePin.clear();
+    this.setupHole(this.holes[0]);
   }
 
   private updateZoneFriction(dt: number) {
     const pos = this.ball.getPosition();
     const zone = this.terrain.getZoneAtPosition(pos.x, pos.z);
     const mat = this.physics.getMaterialForZone(zone);
-    // Change ground material so the ball-ground ContactMaterial lookup matches the zone
     this.physics.groundBody.material = mat;
-
-    // Apply zone-specific rolling resistance (constant deceleration model)
     this.ball.applyRollingResistance(ZONE_PHYSICS[zone].rollingResistance, dt);
   }
 }

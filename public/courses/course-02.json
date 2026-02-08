@@ -1,0 +1,80 @@
+{
+  "name": "Scorched Sands - Hole 2",
+  "par": 4,
+  "theme": "desert",
+  "sponsor": {
+    "name": "SunStrike Energy",
+    "tagline": "Powered by the Sun",
+    "primaryColor": "#c44b00",
+    "secondaryColor": "#ffd700",
+    "tier": "designer"
+  },
+  "tee": { "x": 0, "z": 35 },
+  "hole": { "x": -5, "z": -35 },
+  "zones": [
+    {
+      "type": "tee",
+      "shape": "rect",
+      "position": { "x": 0, "z": 35 },
+      "size": { "width": 4, "height": 4 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": -1, "z": 15 },
+      "size": { "width": 9, "height": 36 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": -3, "z": -12 },
+      "size": { "width": 10, "height": 20 }
+    },
+    {
+      "type": "green",
+      "shape": "circle",
+      "position": { "x": -5, "z": -35 },
+      "radius": 5.5
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 5, "z": 5 },
+      "radius": 4
+    },
+    {
+      "type": "sand",
+      "shape": "rect",
+      "position": { "x": -10, "z": -20 },
+      "size": { "width": 5, "height": 12 }
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": -10, "z": -37 },
+      "radius": 3
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 2, "z": -33 },
+      "radius": 2.5
+    },
+    {
+      "type": "water",
+      "shape": "circle",
+      "position": { "x": 7, "z": -15 },
+      "radius": 3.5
+    }
+  ],
+  "obstacles": [
+    { "type": "cactus", "position": { "x": 8, "z": 20, "y": 0 } },
+    { "type": "cactus", "position": { "x": -7, "z": 10, "y": 0 } },
+    { "type": "cactus", "position": { "x": 6, "z": -5, "y": 0 } },
+    { "type": "cactus", "position": { "x": -9, "z": -30, "y": 0 } },
+    { "type": "rock", "position": { "x": 4, "z": -25, "y": 0 } },
+    { "type": "rock", "position": { "x": -6, "z": 0, "y": 0 } },
+    { "type": "rock", "position": { "x": 9, "z": -35, "y": 0 } },
+    { "type": "cactus", "position": { "x": -4, "z": 25, "y": 0 } }
+  ]
+}

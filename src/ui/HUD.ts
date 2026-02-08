@@ -1,3 +1,5 @@
+import { SponsorData } from '../types';
+
 export class HUD {
   private container: HTMLElement;
   private topLeft!: HTMLElement;
@@ -13,6 +15,8 @@ export class HUD {
   private distanceEl!: HTMLElement;
   private clubEl!: HTMLElement;
   private scorecardEl!: HTMLElement;
+  private sponsorBanner!: HTMLElement;
+  private holeProgressEl!: HTMLElement;
 
   onClubPrev?: () => void;
   onClubNext?: () => void;
@@ -32,10 +36,13 @@ export class HUD {
     this.holeNameEl.className = 'hole-name';
     this.shotInfoEl = document.createElement('div');
     this.shotInfoEl.className = 'shot-info';
+    this.holeProgressEl = document.createElement('div');
+    this.holeProgressEl.className = 'hole-progress';
     this.scorecardEl = document.createElement('div');
     this.scorecardEl.className = 'scorecard';
     this.topLeft.appendChild(this.holeNameEl);
     this.topLeft.appendChild(this.shotInfoEl);
+    this.topLeft.appendChild(this.holeProgressEl);
     this.topLeft.appendChild(this.scorecardEl);
     this.container.appendChild(this.topLeft);
 
@@ -50,6 +57,11 @@ export class HUD {
     this.topRight.appendChild(this.distanceEl);
     this.topRight.appendChild(distLabel);
     this.container.appendChild(this.topRight);
+
+    // Sponsor banner (bottom-right)
+    this.sponsorBanner = document.createElement('div');
+    this.sponsorBanner.className = 'sponsor-banner';
+    this.container.appendChild(this.sponsorBanner);
 
     // Power meter
     this.powerContainer = document.createElement('div');
@@ -112,6 +124,43 @@ export class HUD {
     this.distanceEl.textContent = `${meters.toFixed(1)}m`;
   }
 
+  setHoleProgress(current: number, total: number) {
+    this.holeProgressEl.textContent = `Hole ${current} of ${total}`;
+  }
+
+  setSponsor(sponsor: SponsorData | undefined) {
+    if (!sponsor) {
+      this.sponsorBanner.classList.remove('visible');
+      return;
+    }
+
+    const tierLabels = { hole: 'Hole Sponsor', course: 'Course Sponsor', designer: 'Hole Designer' };
+    this.sponsorBanner.innerHTML = '';
+
+    const tierEl = document.createElement('div');
+    tierEl.className = 'sponsor-tier';
+    tierEl.textContent = tierLabels[sponsor.tier];
+    tierEl.style.background = sponsor.primaryColor;
+    tierEl.style.color = sponsor.secondaryColor ?? '#ffffff';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'sponsor-name';
+    nameEl.textContent = sponsor.name;
+    nameEl.style.color = sponsor.primaryColor;
+
+    this.sponsorBanner.appendChild(tierEl);
+    this.sponsorBanner.appendChild(nameEl);
+
+    if (sponsor.tagline) {
+      const tagEl = document.createElement('div');
+      tagEl.className = 'sponsor-tagline';
+      tagEl.textContent = sponsor.tagline;
+      this.sponsorBanner.appendChild(tagEl);
+    }
+
+    this.sponsorBanner.classList.add('visible');
+  }
+
   showPowerMeter(visible: boolean) {
     this.powerContainer.classList.toggle('visible', visible);
     this.powerLabel.classList.toggle('visible', visible);
@@ -121,7 +170,7 @@ export class HUD {
     const pct = power * 100;
     this.powerFill.style.width = `${pct}%`;
 
-    // Color gradient: green → yellow → red
+    // Color gradient: green -> yellow -> red
     if (power < 0.5) {
       const t = power / 0.5;
       const r = Math.round(t * 255);
@@ -153,11 +202,12 @@ export class HUD {
     this.clubEl.textContent = `${name}  —  ${maxDist}m`;
   }
 
-  setScorecard(scores: number[], par: number) {
+  setScorecard(scores: number[], pars: number[]) {
     const parts = scores.map((s, i) => {
+      const par = pars[i] ?? pars[0];
       const diff = s - par;
       const label = diff === 0 ? 'E' : (diff > 0 ? `+${diff}` : `${diff}`);
-      return `R${i + 1}: ${s} (${label})`;
+      return `H${i + 1}: ${s} (${label})`;
     });
     this.scorecardEl.textContent = parts.join('  |  ');
   }

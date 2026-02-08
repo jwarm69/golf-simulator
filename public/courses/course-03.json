@@ -1,0 +1,80 @@
+{
+  "name": "Frozen Peak - Hole 3",
+  "par": 3,
+  "theme": "arctic",
+  "sponsor": {
+    "name": "FrostByte Tech",
+    "tagline": "Cool Under Pressure",
+    "primaryColor": "#1a4a6b",
+    "secondaryColor": "#b0e0ff",
+    "tier": "course"
+  },
+  "tee": { "x": 0, "z": 28 },
+  "hole": { "x": 3, "z": -22 },
+  "zones": [
+    {
+      "type": "tee",
+      "shape": "rect",
+      "position": { "x": 0, "z": 28 },
+      "size": { "width": 4, "height": 4 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 1, "z": 8 },
+      "size": { "width": 8, "height": 36 }
+    },
+    {
+      "type": "green",
+      "shape": "circle",
+      "position": { "x": 3, "z": -22 },
+      "radius": 5
+    },
+    {
+      "type": "ice",
+      "shape": "rect",
+      "position": { "x": -6, "z": 5 },
+      "size": { "width": 5, "height": 10 }
+    },
+    {
+      "type": "ice",
+      "shape": "circle",
+      "position": { "x": 8, "z": -10 },
+      "radius": 3
+    },
+    {
+      "type": "snow",
+      "shape": "circle",
+      "position": { "x": -5, "z": -18 },
+      "radius": 4
+    },
+    {
+      "type": "snow",
+      "shape": "rect",
+      "position": { "x": 9, "z": 15 },
+      "size": { "width": 6, "height": 8 }
+    },
+    {
+      "type": "water",
+      "shape": "circle",
+      "position": { "x": -3, "z": -8 },
+      "radius": 2.5
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 8, "z": -24 },
+      "radius": 2
+    }
+  ],
+  "obstacles": [
+    { "type": "snow_tree", "position": { "x": -5, "z": 20, "y": 0 } },
+    { "type": "snow_tree", "position": { "x": 7, "z": 22, "y": 0 } },
+    { "type": "snow_tree", "position": { "x": -7, "z": -5, "y": 0 } },
+    { "type": "snow_tree", "position": { "x": 6, "z": 5, "y": 0 } },
+    { "type": "ice_rock", "position": { "x": -4, "z": -25, "y": 0 } },
+    { "type": "ice_rock", "position": { "x": 10, "z": -15, "y": 0 } },
+    { "type": "ice_rock", "position": { "x": -8, "z": 10, "y": 0 } },
+    { "type": "snow_tree", "position": { "x": -6, "z": -28, "y": 0 } }
+  ]
+}

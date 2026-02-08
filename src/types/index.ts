@@ -1,6 +1,8 @@
-export type ZoneType = 'tee' | 'fairway' | 'green' | 'rough' | 'sand' | 'water';
+export type ZoneType = 'tee' | 'fairway' | 'green' | 'rough' | 'sand' | 'water' | 'ice' | 'snow';
 
 export type GameState = 'aiming' | 'power' | 'rolling' | 'stopped' | 'holed';
+
+export type CourseTheme = 'meadow' | 'desert' | 'arctic';
 
 export interface Vec2 {
   x: number;
@@ -13,6 +15,15 @@ export interface Vec3 {
   z: number;
 }
 
+export interface SponsorData {
+  name: string;
+  tagline?: string;
+  primaryColor: string;   // hex color e.g. "#ff0000"
+  secondaryColor?: string;
+  website?: string;
+  tier: 'hole' | 'course' | 'designer';  // sponsorship level
+}
+
 export interface ZoneData {
   type: ZoneType;
   shape: 'rect' | 'circle';
@@ -22,7 +33,7 @@ export interface ZoneData {
 }
 
 export interface ObstacleData {
-  type: 'tree' | 'rock';
+  type: 'tree' | 'rock' | 'cactus' | 'ice_rock' | 'snow_tree';
   position: Vec3;
 }
 
@@ -33,6 +44,18 @@ export interface CourseData {
   hole: Vec2;
   zones: ZoneData[];
   obstacles: ObstacleData[];
+  theme?: CourseTheme;
+  sponsor?: SponsorData;
+}
+
+export interface ThemeConfig {
+  skyColor: number;
+  fogColor: number;
+  groundColor: number;
+  zoneColors: Record<ZoneType, number>;
+  ambientIntensity: number;
+  sunIntensity: number;
+  sunColor: number;
 }
 
 export const ZONE_PHYSICS: Record<ZoneType, { friction: number; restitution: number; rollingResistance: number }> = {
@@ -42,6 +65,8 @@ export const ZONE_PHYSICS: Record<ZoneType, { friction: number; restitution: num
   rough:   { friction: 0.8, restitution: 0.2,  rollingResistance: 0.25 },
   sand:    { friction: 1.0, restitution: 0.05, rollingResistance: 0.65 },
   water:   { friction: 0.3, restitution: 0.0,  rollingResistance: 0.10 },
+  ice:     { friction: 0.15, restitution: 0.5, rollingResistance: 0.02 },
+  snow:    { friction: 0.7, restitution: 0.1,  rollingResistance: 0.35 },
 };
 
 export const ZONE_COLORS: Record<ZoneType, number> = {
@@ -51,6 +76,56 @@ export const ZONE_COLORS: Record<ZoneType, number> = {
   rough: 0x3d7a32,
   sand: 0xe8d68c,
   water: 0x3a8fbf,
+  ice: 0xa8d8ea,
+  snow: 0xe8e8f0,
+};
+
+export const THEME_CONFIGS: Record<CourseTheme, ThemeConfig> = {
+  meadow: {
+    skyColor: 0x87ceeb,
+    fogColor: 0x87ceeb,
+    groundColor: 0x3d7a32,
+    zoneColors: { ...ZONE_COLORS },
+    ambientIntensity: 0.3,
+    sunIntensity: 1.0,
+    sunColor: 0xffffff,
+  },
+  desert: {
+    skyColor: 0xf4a460,
+    fogColor: 0xe8c88a,
+    groundColor: 0xc2a355,
+    zoneColors: {
+      tee: 0x8b7d3c,
+      fairway: 0xa09040,
+      green: 0x6e9b3e,
+      rough: 0xc2a355,
+      sand: 0xe8d68c,
+      water: 0x2e8b8b,
+      ice: 0xa8d8ea,
+      snow: 0xe8e8f0,
+    },
+    ambientIntensity: 0.5,
+    sunIntensity: 1.4,
+    sunColor: 0xfff4e0,
+  },
+  arctic: {
+    skyColor: 0xb0c4de,
+    fogColor: 0xc8d8e8,
+    groundColor: 0xd0d8e0,
+    zoneColors: {
+      tee: 0x6b8e6b,
+      fairway: 0x7aa87a,
+      green: 0x8ec88e,
+      rough: 0xd0d8e0,
+      sand: 0xc8c8d0,
+      water: 0x4a7a9b,
+      ice: 0xa8d8ea,
+      snow: 0xe8e8f0,
+    },
+    ambientIntensity: 0.4,
+    sunIntensity: 0.8,
+    sunColor: 0xe8e8ff,
+  },
 };
 
 export interface ClubData {
