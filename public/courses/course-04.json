@@ -1,0 +1,116 @@
+{
+  "name": "Tropical Cove - Hole 4",
+  "par": 4,
+  "theme": "tropical",
+  "sponsor": {
+    "name": "Island Air",
+    "tagline": "Fly in Paradise",
+    "primaryColor": "#0077b6",
+    "secondaryColor": "#ffffff",
+    "website": "https://islandair.example.com",
+    "tier": "hole"
+  },
+  "wind": {
+    "direction": 135,
+    "speed": 4.5,
+    "gustVariance": 0.25
+  },
+  "tee": { "x": 0, "z": 50 },
+  "hole": { "x": 20, "z": -55 },
+  "green": {
+    "slopeAngle": 315,
+    "slopeStrength": 0.4,
+    "speed": "fast"
+  },
+  "zones": [
+    {
+      "type": "tee",
+      "shape": "rect",
+      "position": { "x": 0, "z": 50 },
+      "size": { "width": 5, "height": 5 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 0, "z": 30 },
+      "size": { "width": 12, "height": 36 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 5, "z": 5 },
+      "size": { "width": 14, "height": 16 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 12, "z": -15 },
+      "size": { "width": 12, "height": 24 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 18, "z": -38 },
+      "size": { "width": 12, "height": 24 }
+    },
+    {
+      "type": "green",
+      "shape": "circle",
+      "position": { "x": 20, "z": -55 },
+      "radius": 7
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": -6, "z": 8 },
+      "radius": 3
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 28, "z": -52 },
+      "radius": 3.5
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 13, "z": -55 },
+      "radius": 2.5
+    },
+    {
+      "type": "water",
+      "shape": "rect",
+      "position": { "x": -8, "z": -20 },
+      "size": { "width": 8, "height": 30 }
+    },
+    {
+      "type": "water",
+      "shape": "circle",
+      "position": { "x": 26, "z": -30 },
+      "radius": 5
+    },
+    {
+      "type": "water",
+      "shape": "rect",
+      "position": { "x": 30, "z": 10 },
+      "size": { "width": 10, "height": 20 }
+    }
+  ],
+  "obstacles": [
+    { "type": "palm_tree", "position": { "x": 8, "z": 45, "y": 0 } },
+    { "type": "palm_tree", "position": { "x": -7, "z": 38, "y": 0 } },
+    { "type": "palm_tree", "position": { "x": -10, "z": 18, "y": 0 } },
+    { "type": "palm_tree", "position": { "x": 14, "z": 20, "y": 0 } },
+    { "type": "palm_tree", "position": { "x": -5, "z": -5, "y": 0 } },
+    { "type": "palm_tree", "position": { "x": 22, "z": 0, "y": 0 } },
+    { "type": "palm_tree", "position": { "x": 24, "z": -18, "y": 0 } },
+    { "type": "palm_tree", "position": { "x": 5, "z": -35, "y": 0 } },
+    { "type": "palm_tree", "position": { "x": 30, "z": -45, "y": 0 } },
+    { "type": "palm_tree", "position": { "x": 12, "z": -65, "y": 0 } },
+    { "type": "tropical_rock", "position": { "x": -3, "z": -12, "y": 0 } },
+    { "type": "tropical_rock", "position": { "x": 20, "z": -10, "y": 0 } },
+    { "type": "tropical_rock", "position": { "x": 10, "z": -48, "y": 0 } },
+    { "type": "tropical_rock", "position": { "x": -12, "z": -35, "y": 0 } },
+    { "type": "tropical_rock", "position": { "x": 32, "z": -60, "y": 0 } }
+  ]
+}

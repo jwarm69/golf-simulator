@@ -112,6 +112,8 @@ export class Terrain {
       case 'cactus': this.addCactus(obstacle.position); break;
       case 'ice_rock': this.addIceRock(obstacle.position); break;
       case 'snow_tree': this.addSnowTree(obstacle.position); break;
+      case 'palm_tree': this.addPalmTree(obstacle.position); break;
+      case 'tropical_rock': this.addTropicalRock(obstacle.position); break;
     }
   }
 
@@ -246,6 +248,100 @@ export class Terrain {
     treeBody.position.set(pos.x, 2, pos.z);
     this.physics.addBody(treeBody);
     this.bodies.push(treeBody);
+  }
+
+  private addPalmTree(pos: { x: number; y: number; z: number }) {
+    // Curved trunk — two tilted segments
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8b6914, roughness: 0.9 });
+
+    // Lower trunk
+    const lowerGeo = new THREE.CylinderGeometry(0.18, 0.25, 3, 8);
+    const lower = new THREE.Mesh(lowerGeo, trunkMat);
+    lower.position.set(pos.x, 1.5, pos.z);
+    lower.rotation.z = 0.1;
+    lower.castShadow = true;
+    this.scene.add(lower);
+    this.meshes.push(lower);
+
+    // Upper trunk
+    const upperGeo = new THREE.CylinderGeometry(0.12, 0.18, 2.5, 8);
+    const upper = new THREE.Mesh(upperGeo, trunkMat);
+    upper.position.set(pos.x + 0.2, 4.2, pos.z);
+    upper.rotation.z = 0.15;
+    upper.castShadow = true;
+    this.scene.add(upper);
+    this.meshes.push(upper);
+
+    // Coconut cluster at top
+    const coconutMat = new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: 0.8 });
+    for (let i = 0; i < 3; i++) {
+      const coconutGeo = new THREE.SphereGeometry(0.15, 8, 8);
+      const coconut = new THREE.Mesh(coconutGeo, coconutMat);
+      const angle = (i / 3) * Math.PI * 2;
+      coconut.position.set(pos.x + 0.3 + Math.cos(angle) * 0.2, 5.3, pos.z + Math.sin(angle) * 0.2);
+      this.scene.add(coconut);
+      this.meshes.push(coconut);
+    }
+
+    // Palm fronds — flat elliptical shapes fanning out
+    const frondMat = new THREE.MeshStandardMaterial({
+      color: 0x228b22,
+      roughness: 0.7,
+      side: THREE.DoubleSide,
+    });
+    for (let i = 0; i < 7; i++) {
+      const angle = (i / 7) * Math.PI * 2;
+      const frondGeo = new THREE.PlaneGeometry(0.8, 3);
+      const frond = new THREE.Mesh(frondGeo, frondMat);
+      frond.position.set(
+        pos.x + 0.3 + Math.cos(angle) * 1.2,
+        5.0 + Math.random() * 0.3,
+        pos.z + Math.sin(angle) * 1.2
+      );
+      frond.rotation.x = -0.6 - Math.random() * 0.3;
+      frond.rotation.y = angle;
+      frond.castShadow = true;
+      this.scene.add(frond);
+      this.meshes.push(frond);
+    }
+
+    // Physics body
+    const palmBody = new CANNON.Body({ mass: 0 });
+    palmBody.addShape(new CANNON.Cylinder(0.3, 0.3, 5, 8));
+    palmBody.position.set(pos.x, 2.5, pos.z);
+    this.physics.addBody(palmBody);
+    this.bodies.push(palmBody);
+  }
+
+  private addTropicalRock(pos: { x: number; y: number; z: number }) {
+    // Mossy volcanic rock
+    const rockGeo = new THREE.DodecahedronGeometry(0.7, 1);
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.95 });
+    const rock = new THREE.Mesh(rockGeo, rockMat);
+    rock.position.set(pos.x, 0.4, pos.z);
+    rock.scale.set(1, 0.7, 1);
+    rock.castShadow = true;
+    this.scene.add(rock);
+    this.meshes.push(rock);
+
+    // Moss patch on top
+    const mossGeo = new THREE.SphereGeometry(0.5, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2);
+    const mossMat = new THREE.MeshStandardMaterial({
+      color: 0x3a7a2a,
+      roughness: 0.9,
+      transparent: true,
+      opacity: 0.7,
+    });
+    const moss = new THREE.Mesh(mossGeo, mossMat);
+    moss.position.set(pos.x, 0.6, pos.z);
+    this.scene.add(moss);
+    this.meshes.push(moss);
+
+    const rockBody = new CANNON.Body({ mass: 0 });
+    rockBody.addShape(new CANNON.Sphere(0.7));
+    rockBody.position.set(pos.x, 0.4, pos.z);
+    this.physics.addBody(rockBody);
+    this.bodies.push(rockBody);
   }
 
   private addSponsorBillboards(course: CourseData) {

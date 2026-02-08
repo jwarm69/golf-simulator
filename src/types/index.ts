@@ -2,7 +2,7 @@ export type ZoneType = 'tee' | 'fairway' | 'green' | 'rough' | 'sand' | 'water' 
 
 export type GameState = 'aiming' | 'power' | 'rolling' | 'stopped' | 'holed';
 
-export type CourseTheme = 'meadow' | 'desert' | 'arctic';
+export type CourseTheme = 'meadow' | 'desert' | 'arctic' | 'tropical';
 
 export interface Vec2 {
   x: number;
@@ -40,7 +40,7 @@ export interface ZoneData {
 }
 
 export interface ObstacleData {
-  type: 'tree' | 'rock' | 'cactus' | 'ice_rock' | 'snow_tree';
+  type: 'tree' | 'rock' | 'cactus' | 'ice_rock' | 'snow_tree' | 'palm_tree' | 'tropical_rock';
   position: Vec3;
 }
 
@@ -164,6 +164,24 @@ export const THEME_CONFIGS: Record<CourseTheme, ThemeConfig> = {
     ambientIntensity: 0.4,
     sunIntensity: 0.8,
     sunColor: 0xe8e8ff,
+  },
+  tropical: {
+    skyColor: 0x5ec4e8,
+    fogColor: 0x7dd4f0,
+    groundColor: 0x2a7a28,
+    zoneColors: {
+      tee: 0x3a9a35,
+      fairway: 0x4db848,
+      green: 0x60d858,
+      rough: 0x2a7a28,
+      sand: 0xf5e6b8,
+      water: 0x20a0c8,
+      ice: 0xa8d8ea,
+      snow: 0xe8e8f0,
+    },
+    ambientIntensity: 0.35,
+    sunIntensity: 1.2,
+    sunColor: 0xfff8e0,
   },
 };
 

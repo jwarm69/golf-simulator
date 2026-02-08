@@ -336,6 +336,7 @@ export class HUD {
           meadow: '#4a8c3f',
           desert: '#c44b00',
           arctic: '#4a7a9b',
+          tropical: '#0077b6',
         };
         const themeColor = themeColors[hole.theme ?? 'meadow'] ?? '#4a8c3f';
         card.style.borderColor = themeColor;

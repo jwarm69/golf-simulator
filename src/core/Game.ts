@@ -101,6 +101,7 @@ export class Game {
         '/courses/course-01.json',
         '/courses/course-02.json',
         '/courses/course-03.json',
+        '/courses/course-04.json',
       ]);
     }
   }
@@ -266,7 +267,8 @@ export class Game {
   };
 
   private update(dt: number) {
-    if (!this.course || this.waitingForTransition) return;
+    if (this.waitingForTransition) return;
+    if (!this.course && !this.isDrivingRange) return;
 
     switch (this.state) {
       case 'aiming':
@@ -304,11 +306,16 @@ export class Game {
 
     // Update distance display
     const ballPos = this.ball.getPosition();
-    const holePos = this.holePin.getPosition();
-    const dist = Math.sqrt(
-      (ballPos.x - holePos.x) ** 2 + (ballPos.z - holePos.z) ** 2
-    );
-    this.hud.setDistance(dist);
+    if (this.isDrivingRange) {
+      const dist = this.drivingRange.getDistanceFromTee(ballPos.x, ballPos.z);
+      this.hud.setDistance(dist);
+    } else {
+      const holePos = this.holePin.getPosition();
+      const dist = Math.sqrt(
+        (ballPos.x - holePos.x) ** 2 + (ballPos.z - holePos.z) ** 2
+      );
+      this.hud.setDistance(dist);
+    }
 
     // Apply wind force during flight
     if (this.currentWind && this.state === 'rolling') {
