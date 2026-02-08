@@ -27,6 +27,7 @@ export class HUD {
   onClubPrev?: () => void;
   onClubNext?: () => void;
   onFlyover?: () => void;
+  onMainMenu?: (choice: 'course' | 'range') => void;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -633,5 +634,89 @@ export class HUD {
       this.flyoverBtn.innerHTML = '\uD83C\uDFCC\uFE0F Hole View';
       this.flyoverBtn.classList.remove('active');
     }
+  }
+
+  // ——— Main Menu ———
+  showMainMenu(): Promise<'course' | 'range'> {
+    return new Promise((resolve) => {
+      this.transitionOverlay.innerHTML = '';
+
+      const title = document.createElement('div');
+      title.className = 'main-menu-title';
+      title.textContent = 'GOLF SIMULATOR';
+      this.transitionOverlay.appendChild(title);
+
+      const subtitle = document.createElement('div');
+      subtitle.className = 'main-menu-subtitle';
+      subtitle.textContent = 'Choose your mode';
+      this.transitionOverlay.appendChild(subtitle);
+
+      const grid = document.createElement('div');
+      grid.className = 'main-menu-grid';
+
+      // Play Course card
+      const courseCard = document.createElement('div');
+      courseCard.className = 'main-menu-card';
+      courseCard.innerHTML =
+        `<div class="menu-card-icon">\u26F3</div>`
+        + `<div class="menu-card-title">Play Course</div>`
+        + `<div class="menu-card-desc">Tackle 3 themed holes with sponsors, wind, and green reads</div>`;
+      courseCard.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.transitionOverlay.classList.remove('visible');
+        resolve('course');
+      });
+      grid.appendChild(courseCard);
+
+      // Driving Range card
+      const rangeCard = document.createElement('div');
+      rangeCard.className = 'main-menu-card range-card';
+      rangeCard.innerHTML =
+        `<div class="menu-card-icon">\uD83C\uDFAF</div>`
+        + `<div class="menu-card-title">Driving Range</div>`
+        + `<div class="menu-card-desc">Practice your swing with distance targets and shot tracking</div>`;
+      rangeCard.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.transitionOverlay.classList.remove('visible');
+        resolve('range');
+      });
+      grid.appendChild(rangeCard);
+
+      this.transitionOverlay.appendChild(grid);
+      this.transitionOverlay.classList.add('visible');
+    });
+  }
+
+  // ——— Driving Range HUD ———
+  setRangeMode(active: boolean) {
+    // Toggle visibility of course-specific vs range-specific elements
+    if (active) {
+      this.holeProgressEl.textContent = '';
+      this.cumulativeScoreEl.textContent = '';
+      this.scorecardEl.textContent = '';
+      this.sponsorBanner.classList.remove('visible');
+    }
+  }
+
+  setRangeShotStats(stats: {
+    carry: number;
+    total: number;
+    targetHit: string | null;
+    accuracy: number | null;
+    shotNum: number;
+  }) {
+    const targetLine = stats.targetHit
+      ? `<div><span class="target-hit">Target: ${stats.targetHit}</span> | Accuracy: ${stats.accuracy?.toFixed(0)}%</div>`
+      : '';
+    this.shotInfoEl.innerHTML =
+      `<div>Shot ${stats.shotNum}</div>`
+      + `<div class="range-stats">`
+      + `Carry: <span class="carry-value">${stats.carry.toFixed(1)}m</span>`
+      + targetLine
+      + `</div>`;
+  }
+
+  showRangeReady(shotNum: number) {
+    this.shotInfoEl.innerHTML = `Shot ${shotNum} | <span class="range-ready-badge">Ready</span>`;
   }
 }

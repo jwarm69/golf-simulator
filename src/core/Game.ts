@@ -1,9 +1,11 @@
+import * as THREE from 'three';
 import { Renderer } from './Renderer';
 import { PhysicsWorld } from './PhysicsWorld';
 import { InputManager } from './InputManager';
 import { CameraController } from './CameraController';
 import { GolfBall } from '../game/GolfBall';
 import { Terrain } from '../game/Terrain';
+import { DrivingRange } from '../game/DrivingRange';
 import { HolePin } from '../game/HolePin';
 import { ShotController } from '../game/ShotController';
 import { TrajectoryPreview } from '../game/TrajectoryPreview';
@@ -53,6 +55,12 @@ export class Game {
   // Leaderboard
   private leaderboard: Leaderboard;
 
+  // Driving range
+  private drivingRange: DrivingRange;
+  private isDrivingRange = false;
+  private rangeShotCount = 0;
+  private rangeBallLanded = false;
+
   constructor(canvas: HTMLCanvasElement, hudContainer: HTMLElement) {
     this.renderer = new Renderer(canvas);
     this.physics = new PhysicsWorld();
@@ -67,6 +75,7 @@ export class Game {
       this.cameraController
     );
     this.courseLoader = new CourseLoader();
+    this.drivingRange = new DrivingRange(this.renderer.scene, this.physics);
     this.hud = new HUD(hudContainer);
 
     // Trajectory preview arc + landing ring
@@ -81,6 +90,60 @@ export class Game {
 
     // Flyover button
     this.hud.onFlyover = () => this.toggleFlyover();
+  }
+
+  async showMainMenu() {
+    const choice = await this.hud.showMainMenu();
+    if (choice === 'range') {
+      this.enterDrivingRange();
+    } else {
+      await this.loadCourses([
+        '/courses/course-01.json',
+        '/courses/course-02.json',
+        '/courses/course-03.json',
+      ]);
+    }
+  }
+
+  enterDrivingRange() {
+    this.isDrivingRange = true;
+    this.rangeShotCount = 0;
+    this.rangeBallLanded = false;
+    this.course = null;
+    this.currentWind = null;
+
+    // Apply meadow theme
+    this.renderer.applyTheme(THEME_CONFIGS.meadow);
+
+    // Build the range
+    this.terrain.clear();
+    this.holePin.clear();
+    this.drivingRange.build();
+
+    // Place ball at tee
+    this.ball.setPosition(0, BALL_RADIUS + 0.01, 0);
+
+    // Setup HUD
+    this.hud.setHoleName('Driving Range');
+    this.hud.showRangeReady(1);
+    this.hud.setDistance(0);
+    this.hud.setRangeMode(true);
+    this.hud.setWind(null);
+    this.hud.showGreenRead(null);
+    this.hud.showFlyoverBtn(true);
+    this.hud.setSponsor(undefined);
+
+    // Init default club
+    this.clubIndex = DEFAULT_CLUB_INDEX;
+    this.cycleClub(0);
+
+    // Camera
+    this.cameraController.setTarget(this.ball.getPosition());
+    this.cameraController.setMode('aim');
+    this.cameraController.setHoleEndpoints({ x: 0, z: 0 }, { x: 0, z: -250 });
+
+    this.state = 'aiming';
+    this.waitingForTransition = false;
   }
 
   async loadCourse(path: string) {
@@ -331,7 +394,9 @@ export class Game {
       this.ball.applyShot(shot.direction, shot.power);
 
       this.shotCount++;
-      this.hud.setShotInfo(this.shotCount, this.course!.par);
+      if (!this.isDrivingRange) {
+        this.hud.setShotInfo(this.shotCount, this.course!.par);
+      }
       this.hud.showPowerMeter(false);
       this.trajectoryPreview.setVisible(false);
 
@@ -344,8 +409,25 @@ export class Game {
     this.hud.showAimHint(false);
     this.trajectoryPreview.setVisible(false);
 
-    // Check water hazard
     const ballPos = this.ball.getPosition();
+
+    // Driving range mode
+    if (this.isDrivingRange) {
+      // Show distance in real-time
+      const dist = this.drivingRange.getDistanceFromTee(ballPos.x, ballPos.z);
+      this.hud.setDistance(dist);
+
+      if (this.ball.isSleeping && !this.rangeBallLanded) {
+        this.rangeBallLanded = true;
+        this.onRangeBallLanded(ballPos);
+      }
+      if (this.ball.isSleeping) {
+        this.state = 'stopped';
+      }
+      return;
+    }
+
+    // Check water hazard
     const zone = this.terrain.getZoneAtPosition(ballPos.x, ballPos.z);
     if (zone === 'water') {
       this.ball.resetToLastStable();
@@ -372,8 +454,48 @@ export class Game {
   }
 
   private updateStopped(_dt: number) {
+    if (this.isDrivingRange) {
+      // Auto-reset to tee after a delay
+      this.state = 'aiming';
+      setTimeout(() => {
+        if (this.isDrivingRange) {
+          this.ball.setPosition(0, BALL_RADIUS + 0.01, 0);
+          this.cameraController.setTarget(this.ball.getPosition());
+          this.rangeBallLanded = false;
+          this.hud.showRangeReady(this.rangeShotCount + 1);
+        }
+      }, 1500);
+      this.cameraController.setMode('aim');
+      return;
+    }
+
     this.cameraController.setMode('aim');
     this.state = 'aiming';
+  }
+
+  private onRangeBallLanded(pos: THREE.Vector3) {
+    this.rangeShotCount++;
+    const carry = this.drivingRange.getDistanceFromTee(pos.x, pos.z);
+    const target = this.drivingRange.getClosestTarget(pos.x, pos.z);
+
+    this.hud.setRangeShotStats({
+      carry,
+      total: carry,
+      targetHit: target ? `${target.distance}m` : null,
+      accuracy: target ? target.accuracy : null,
+      shotNum: this.rangeShotCount,
+    });
+
+    if (target && target.accuracy > 80) {
+      this.hud.showMessage('Bullseye!', `${carry.toFixed(1)}m carry`);
+      setTimeout(() => this.hud.hideMessage(), 2000);
+    } else if (target) {
+      this.hud.showMessage(`${target.distance}m Target`, `${carry.toFixed(1)}m carry | ${target.accuracy.toFixed(0)}% accuracy`);
+      setTimeout(() => this.hud.hideMessage(), 2000);
+    } else {
+      this.hud.showMessage(`${carry.toFixed(1)}m`, 'No target hit');
+      setTimeout(() => this.hud.hideMessage(), 1500);
+    }
   }
 
   private updateHoled(_dt: number) {
@@ -476,11 +598,11 @@ export class Game {
     this.holePin.clear();
     this.hud.hideMessage();
     this.hud.hideLeaderboard();
+    this.isDrivingRange = false;
+    this.drivingRange.clear();
 
-    // Show hole select again
-    const selectedIndex = await this.hud.showHoleSelect(this.holes);
-    this.currentHoleIndex = selectedIndex;
-    await this.showTransitionThenSetup();
+    // Go back to main menu
+    await this.showMainMenu();
   }
 
   private toggleFlyover() {
@@ -503,6 +625,12 @@ export class Game {
   }
 
   private updateZonePhysics(dt: number) {
+    if (this.isDrivingRange) {
+      // Simple fairway-like physics for the range
+      this.ball.applyRollingResistance(0.10, dt);
+      return;
+    }
+
     const pos = this.ball.getPosition();
     const zone = this.terrain.getZoneAtPosition(pos.x, pos.z);
     const mat = this.physics.getMaterialForZone(zone);
