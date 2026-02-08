@@ -580,12 +580,13 @@ body {
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 215, 0, 0.3);
   color: #fff;
-  pointer-events: auto;
+  pointer-events: none;
   z-index: 15;
 }
 
 .leaderboard-panel.visible {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .leaderboard-title {

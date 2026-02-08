@@ -495,12 +495,14 @@ export class HUD {
       this.transitionOverlay.classList.add('visible');
 
       const onClick = () => {
+        this.transitionOverlay.removeEventListener('click', onClick);
         window.removeEventListener('click', onClick);
         this.transitionOverlay.classList.remove('visible');
         resolve();
       };
       // Short delay so the overlay is readable before accepting clicks
       setTimeout(() => {
+        this.transitionOverlay.addEventListener('click', onClick);
         window.addEventListener('click', onClick);
       }, 800);
     });
