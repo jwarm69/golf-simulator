@@ -7,7 +7,13 @@
     "tagline": "Your Game, Elevated",
     "primaryColor": "#1a6b3c",
     "secondaryColor": "#f0e68c",
+    "website": "https://greenlinks.example.com",
     "tier": "hole"
+  },
+  "wind": {
+    "direction": 180,
+    "speed": 3.5,
+    "gustVariance": 0.15
   },
   "tee": { "x": 0, "z": 30 },
   "hole": { "x": 2, "z": -25 },

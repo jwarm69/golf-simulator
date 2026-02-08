@@ -9,10 +9,11 @@ import { ShotController } from '../game/ShotController';
 import { TrajectoryPreview } from '../game/TrajectoryPreview';
 import { CourseLoader } from '../game/CourseLoader';
 import { HUD } from '../ui/HUD';
+import { Leaderboard } from '../game/Leaderboard';
 import {
   GameState, CourseData, BALL_RADIUS, ZONE_PHYSICS, CLUBS,
   DEFAULT_CLUB_INDEX, ClubData, THEME_CONFIGS, CourseTheme,
-  GREEN_SPEED_FACTOR,
+  GREEN_SPEED_FACTOR, WindData,
 } from '../types';
 
 export class Game {
@@ -46,6 +47,12 @@ export class Game {
   // Trajectory preview
   private trajectoryPreview: TrajectoryPreview;
 
+  // Wind
+  private currentWind: WindData | null = null;
+
+  // Leaderboard
+  private leaderboard: Leaderboard;
+
   constructor(canvas: HTMLCanvasElement, hudContainer: HTMLElement) {
     this.renderer = new Renderer(canvas);
     this.physics = new PhysicsWorld();
@@ -64,6 +71,9 @@ export class Game {
 
     // Trajectory preview arc + landing ring
     this.trajectoryPreview = new TrajectoryPreview(this.renderer.scene);
+
+    // Leaderboard
+    this.leaderboard = new Leaderboard();
 
     // Mobile club buttons
     this.hud.onClubPrev = () => this.cycleClub(-1);
@@ -107,6 +117,7 @@ export class Game {
       scorecard: this.scorecard,
       pars: this.holePars,
       greenData: course.green,
+      windData: course.wind,
     });
     this.waitingForTransition = false;
 
@@ -116,6 +127,7 @@ export class Game {
 
   private buildHoleScene(course: CourseData) {
     this.course = course;
+    this.currentWind = course.wind ?? null;
 
     // Apply theme
     const theme: CourseTheme = course.theme ?? 'meadow';
@@ -140,6 +152,7 @@ export class Game {
     this.hud.setShotInfo(this.shotCount, course.par);
     this.hud.setHoleProgress(this.currentHoleIndex + 1, this.holes.length);
     this.hud.setSponsor(course.sponsor);
+    this.hud.setWind(this.currentWind);
     this.updateCumulativeDisplay();
     this.hud.setScorecard(this.scorecard, this.holePars);
     this.hud.showGreenRead(null); // hide initially
@@ -218,6 +231,16 @@ export class Game {
       (ballPos.x - holePos.x) ** 2 + (ballPos.z - holePos.z) ** 2
     );
     this.hud.setDistance(dist);
+
+    // Apply wind force during flight
+    if (this.currentWind && this.state === 'rolling') {
+      this.ball.applyWindForce(
+        this.currentWind.direction,
+        this.currentWind.speed,
+        this.currentWind.gustVariance ?? 0,
+        dt
+      );
+    }
 
     // Update zone-based friction, rolling resistance, and green slope
     this.updateZonePhysics(dt);
@@ -374,6 +397,19 @@ export class Game {
 
     this.hud.showAimHint(false);
 
+    // Save to leaderboard when all holes are done
+    if (!hasNextHole) {
+      this.leaderboard.saveRound({
+        playerName: 'Player',
+        holeScores: [...this.scorecard],
+        totalStrokes,
+        totalPar,
+        date: new Date().toISOString(),
+        courseName: this.holes.map(h => h.name).join(' + '),
+      });
+      this.hud.setLeaderboard(this.leaderboard.getTopEntries(10));
+    }
+
     // After a delay, show next-hole transition or restart prompt
     setTimeout(() => {
       if (hasNextHole) {
@@ -406,6 +442,7 @@ export class Game {
     this.scorecard = [];
     this.holePin.clear();
     this.hud.hideMessage();
+    this.hud.hideLeaderboard();
 
     // Show hole select again
     const selectedIndex = await this.hud.showHoleSelect(this.holes);

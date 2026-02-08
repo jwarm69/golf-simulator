@@ -1,4 +1,4 @@
-import { SponsorData, CourseData, GreenData } from '../types';
+import { SponsorData, CourseData, GreenData, WindData, LeaderboardEntry } from '../types';
 
 export class HUD {
   private container: HTMLElement;
@@ -11,6 +11,8 @@ export class HUD {
   private aimHint!: HTMLElement;
   private transitionOverlay!: HTMLElement;
   private greenReadEl!: HTMLElement;
+  private windIndicator!: HTMLElement;
+  private leaderboardEl!: HTMLElement;
 
   private holeNameEl!: HTMLElement;
   private shotInfoEl!: HTMLElement;
@@ -64,15 +66,25 @@ export class HUD {
     this.topRight.appendChild(distLabel);
     this.container.appendChild(this.topRight);
 
+    // Wind indicator (top-center)
+    this.windIndicator = document.createElement('div');
+    this.windIndicator.className = 'wind-indicator';
+    this.container.appendChild(this.windIndicator);
+
     // Green read info (bottom-left, shown when on the green)
     this.greenReadEl = document.createElement('div');
     this.greenReadEl.className = 'green-read';
     this.container.appendChild(this.greenReadEl);
 
-    // Sponsor banner (bottom-right)
+    // Sponsor banner (bottom-right, clickable)
     this.sponsorBanner = document.createElement('div');
     this.sponsorBanner.className = 'sponsor-banner';
     this.container.appendChild(this.sponsorBanner);
+
+    // Leaderboard panel (hidden by default)
+    this.leaderboardEl = document.createElement('div');
+    this.leaderboardEl.className = 'leaderboard-panel';
+    this.container.appendChild(this.leaderboardEl);
 
     // Transition overlay (between holes)
     this.transitionOverlay = document.createElement('div');
@@ -162,6 +174,19 @@ export class HUD {
 
     const tierLabels = { hole: 'Hole Sponsor', course: 'Course Sponsor', designer: 'Hole Designer' };
     this.sponsorBanner.innerHTML = '';
+    this.sponsorBanner.style.cursor = sponsor.website ? 'pointer' : 'default';
+    this.sponsorBanner.style.pointerEvents = sponsor.website ? 'auto' : 'none';
+
+    // Make the whole banner clickable if there's a website
+    if (sponsor.website) {
+      const url = sponsor.website;
+      this.sponsorBanner.onclick = (e) => {
+        e.stopPropagation();
+        window.open(url, '_blank', 'noopener,noreferrer');
+      };
+    } else {
+      this.sponsorBanner.onclick = null;
+    }
 
     const tierEl = document.createElement('div');
     tierEl.className = 'sponsor-tier';
@@ -184,7 +209,53 @@ export class HUD {
       this.sponsorBanner.appendChild(tagEl);
     }
 
+    // Show website link
+    if (sponsor.website) {
+      const linkEl = document.createElement('div');
+      linkEl.className = 'sponsor-link';
+      linkEl.textContent = 'Visit Sponsor \u2197';
+      this.sponsorBanner.appendChild(linkEl);
+    }
+
     this.sponsorBanner.classList.add('visible');
+  }
+
+  setWind(windData: WindData | null | undefined) {
+    if (!windData) {
+      this.windIndicator.classList.remove('visible');
+      return;
+    }
+
+    const directionNames: Record<number, string> = {
+      0: 'E', 45: 'SE', 90: 'S', 135: 'SW',
+      180: 'W', 225: 'NW', 270: 'N', 315: 'NE',
+    };
+    const normalized = ((windData.direction % 360) + 360) % 360;
+    let closestDir = 'E';
+    let closestDist = 360;
+    for (const [deg, name] of Object.entries(directionNames)) {
+      const d = Math.abs(normalized - Number(deg));
+      const wrapped = Math.min(d, 360 - d);
+      if (wrapped < closestDist) {
+        closestDist = wrapped;
+        closestDir = name;
+      }
+    }
+
+    const arrowMap: Record<string, string> = {
+      N: '\u2191', NE: '\u2197', E: '\u2192', SE: '\u2198',
+      S: '\u2193', SW: '\u2199', W: '\u2190', NW: '\u2196',
+    };
+
+    const speedLabel = windData.speed < 3 ? 'Light' : windData.speed < 6 ? 'Moderate' : 'Strong';
+    const speedMph = (windData.speed * 2.237).toFixed(0);
+
+    this.windIndicator.innerHTML =
+      `<div class="wind-arrow" style="transform: rotate(${normalized}deg)">${arrowMap[closestDir] || '\u2191'}</div>`
+      + `<div class="wind-speed">${speedMph} mph</div>`
+      + `<div class="wind-label">${speedLabel} ${closestDir}</div>`;
+
+    this.windIndicator.classList.add('visible');
   }
 
   showGreenRead(greenData: GreenData | null | undefined) {
@@ -281,6 +352,15 @@ export class HUD {
           card.appendChild(greenInfo);
         }
 
+        if (hole.wind) {
+          const windInfo = document.createElement('div');
+          windInfo.className = 'hole-select-wind';
+          const mph = (hole.wind.speed * 2.237).toFixed(0);
+          const strength = hole.wind.speed < 3 ? 'Light' : hole.wind.speed < 6 ? 'Moderate' : 'Strong';
+          windInfo.textContent = `${strength} wind (${mph} mph)`;
+          card.appendChild(windInfo);
+        }
+
         card.addEventListener('click', (e) => {
           e.stopPropagation();
           this.transitionOverlay.classList.remove('visible');
@@ -316,6 +396,7 @@ export class HUD {
     scorecard: number[];
     pars: number[];
     greenData?: GreenData;
+    windData?: WindData;
   }): Promise<void> {
     return new Promise((resolve) => {
       this.transitionOverlay.innerHTML = '';
@@ -367,6 +448,31 @@ export class HUD {
         greenEl.className = 'transition-green-info';
         greenEl.textContent = `${speedLabel} green  |  ${strengthLabel} break`;
         this.transitionOverlay.appendChild(greenEl);
+      }
+
+      // Wind info
+      if (opts.windData) {
+        const windDirNames: Record<number, string> = {
+          0: 'E', 45: 'SE', 90: 'S', 135: 'SW',
+          180: 'W', 225: 'NW', 270: 'N', 315: 'NE',
+        };
+        const normWind = ((opts.windData.direction % 360) + 360) % 360;
+        let windDir = 'E';
+        let windDist = 360;
+        for (const [deg, name] of Object.entries(windDirNames)) {
+          const d = Math.abs(normWind - Number(deg));
+          const wrapped = Math.min(d, 360 - d);
+          if (wrapped < windDist) {
+            windDist = wrapped;
+            windDir = name;
+          }
+        }
+        const windMph = (opts.windData.speed * 2.237).toFixed(0);
+        const windStrength = opts.windData.speed < 3 ? 'Light' : opts.windData.speed < 6 ? 'Moderate' : 'Strong';
+        const windEl = document.createElement('div');
+        windEl.className = 'transition-wind-info';
+        windEl.textContent = `Wind: ${windStrength} ${windDir} at ${windMph} mph`;
+        this.transitionOverlay.appendChild(windEl);
       }
 
       // Sponsor callout
@@ -464,5 +570,35 @@ export class HUD {
     parts.push(`Total: ${totalStrokes} (${totalLabel})`);
 
     this.scorecardEl.textContent = parts.join('  |  ');
+  }
+
+  setLeaderboard(entries: LeaderboardEntry[]) {
+    if (entries.length === 0) {
+      this.leaderboardEl.classList.remove('visible');
+      return;
+    }
+
+    let html = `<div class="leaderboard-title">LEADERBOARD</div>`;
+    html += `<div class="leaderboard-header"><span>#</span><span>Score</span><span>vs Par</span><span>Date</span></div>`;
+
+    entries.forEach((entry, i) => {
+      const diff = entry.totalStrokes - entry.totalPar;
+      const diffLabel = diff === 0 ? 'E' : (diff > 0 ? `+${diff}` : `${diff}`);
+      const dateStr = new Date(entry.date).toLocaleDateString();
+      const isNew = (Date.now() - new Date(entry.date).getTime()) < 5000;
+      html += `<div class="leaderboard-row${isNew ? ' new-entry' : ''}">`;
+      html += `<span>${i + 1}</span>`;
+      html += `<span>${entry.totalStrokes}</span>`;
+      html += `<span class="lb-par">${diffLabel}</span>`;
+      html += `<span>${dateStr}</span>`;
+      html += `</div>`;
+    });
+
+    this.leaderboardEl.innerHTML = html;
+    this.leaderboardEl.classList.add('visible');
+  }
+
+  hideLeaderboard() {
+    this.leaderboardEl.classList.remove('visible');
   }
 }

@@ -138,6 +138,29 @@ export class GolfBall {
     }
   }
 
+  applyWindForce(windDirectionDeg: number, windSpeed: number, gustVariance: number, dt: number) {
+    // Only apply wind when ball is airborne (above ground level)
+    if (this.body.position.y < BALL_RADIUS + 0.1) return;
+
+    const windRad = (windDirectionDeg * Math.PI) / 180;
+    // Gust fluctuation
+    const gust = 1.0 + (Math.random() * 2 - 1) * gustVariance;
+    const effectiveSpeed = windSpeed * gust;
+
+    // Wind force proportional to ball cross-section area and air density
+    // F = 0.5 * Cd * rho * A * v^2 — simplified for gameplay
+    const forceMagnitude = 0.5 * 0.47 * 1.225 * (Math.PI * BALL_RADIUS * BALL_RADIUS) * effectiveSpeed * effectiveSpeed;
+    const force = forceMagnitude * 15; // gameplay scaling factor
+
+    this.body.applyForce(
+      new CANNON.Vec3(
+        Math.cos(windRad) * force,
+        0,
+        Math.sin(windRad) * force
+      )
+    );
+  }
+
   applySlopeForce(slopeAngleDeg: number, slopeStrength: number, _dt: number) {
     // Only apply when ball is on the ground
     if (this.body.position.y > BALL_RADIUS + 0.05) return;

@@ -472,6 +472,13 @@ body {
   text-transform: capitalize;
 }
 
+.hole-select-wind {
+  font-size: 11px;
+  opacity: 0.6;
+  margin-top: 2px;
+  color: #87ceeb;
+}
+
 .hole-select-play-all {
   margin-top: 20px;
   padding: 10px 28px;
@@ -494,6 +501,135 @@ body {
   font-size: 14px;
   color: #6ec85e;
   font-style: italic;
+}
+
+/* Wind indicator */
+.wind-indicator {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 10px;
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.wind-indicator.visible {
+  opacity: 1;
+}
+
+.wind-arrow {
+  font-size: 24px;
+  line-height: 1;
+  color: #87ceeb;
+  transition: transform 0.3s;
+}
+
+.wind-speed {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.wind-label {
+  font-size: 12px;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+/* Transition wind info */
+.transition-wind-info {
+  font-size: 14px;
+  color: #87ceeb;
+  font-style: italic;
+}
+
+/* Sponsor link in banner */
+.sponsor-link {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 2px 12px 6px;
+  text-align: center;
+  text-decoration: underline;
+}
+
+.sponsor-banner:hover .sponsor-link {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Leaderboard panel */
+.leaderboard-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
+  padding: 20px 28px;
+  min-width: 320px;
+  max-width: 420px;
+  opacity: 0;
+  transition: opacity 0.5s;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  color: #fff;
+  pointer-events: auto;
+  z-index: 15;
+}
+
+.leaderboard-panel.visible {
+  opacity: 1;
+}
+
+.leaderboard-title {
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: #ffd700;
+  text-align: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.leaderboard-header {
+  display: grid;
+  grid-template-columns: 30px 60px 60px 1fr;
+  gap: 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 30px 60px 60px 1fr;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.leaderboard-row.new-entry {
+  color: #ffd700;
+  font-weight: bold;
+  animation: pulse-fade 1.5s ease-in-out 3;
+}
+
+.lb-par {
+  color: #6ec85e;
 }
 
 .crosshair {

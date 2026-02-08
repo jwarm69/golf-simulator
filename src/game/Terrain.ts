@@ -327,7 +327,16 @@ export class Terrain {
       // Tagline
       if (sponsor.tagline) {
         ctx.font = '24px Arial, sans-serif';
-        ctx.fillText(sponsor.tagline, 256, 150);
+        ctx.fillText(sponsor.tagline, 256, 145);
+      }
+
+      // Website URL
+      if (sponsor.website) {
+        ctx.font = '18px Arial, sans-serif';
+        ctx.globalAlpha = 0.8;
+        const displayUrl = sponsor.website.replace(/^https?:\/\//, '');
+        ctx.fillText(displayUrl, 256, 180);
+        ctx.globalAlpha = 1.0;
       }
 
       // Tier badge
@@ -336,10 +345,10 @@ export class Terrain {
       const tierLabel = tierLabels[sponsor.tier];
       const tierWidth = ctx.measureText(tierLabel).width + 20;
       ctx.fillStyle = sponsor.secondaryColor ?? '#ffffff';
-      ctx.fillRect(256 - tierWidth / 2, 200, tierWidth, 30);
+      ctx.fillRect(256 - tierWidth / 2, 210, tierWidth, 30);
       ctx.fillStyle = sponsor.primaryColor;
       ctx.textBaseline = 'middle';
-      ctx.fillText(tierLabel, 256, 215);
+      ctx.fillText(tierLabel, 256, 225);
 
       const texture = new THREE.CanvasTexture(canvas);
       const textGeo = new THREE.PlaneGeometry(4.6, 2.3);

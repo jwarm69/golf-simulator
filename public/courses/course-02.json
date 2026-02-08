@@ -7,7 +7,13 @@
     "tagline": "Powered by the Sun",
     "primaryColor": "#c44b00",
     "secondaryColor": "#ffd700",
+    "website": "https://sunstrike.example.com",
     "tier": "designer"
+  },
+  "wind": {
+    "direction": 90,
+    "speed": 7.0,
+    "gustVariance": 0.35
   },
   "tee": { "x": 0, "z": 35 },
   "hole": { "x": -5, "z": -35 },

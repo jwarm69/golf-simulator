@@ -21,7 +21,14 @@ export interface SponsorData {
   primaryColor: string;   // hex color e.g. "#ff0000"
   secondaryColor?: string;
   website?: string;
+  logoUrl?: string;        // URL to sponsor logo image
   tier: 'hole' | 'course' | 'designer';  // sponsorship level
+}
+
+export interface WindData {
+  direction: number;     // degrees — wind blows toward this angle (0=+x, 90=+z, 180=-x, 270=-z)
+  speed: number;         // m/s — wind speed
+  gustVariance?: number; // 0-1 — random gust amplitude (fraction of speed)
 }
 
 export interface ZoneData {
@@ -53,6 +60,25 @@ export interface CourseData {
   theme?: CourseTheme;
   sponsor?: SponsorData;
   green?: GreenData;
+  wind?: WindData;
+}
+
+export interface LeaderboardEntry {
+  playerName: string;
+  holeScores: number[];
+  totalStrokes: number;
+  totalPar: number;
+  date: string;         // ISO date string
+  courseName: string;
+}
+
+export interface TournamentData {
+  id: string;
+  name: string;
+  type: 'daily' | 'weekly' | 'tournament';
+  startDate: string;
+  endDate: string;
+  entries: LeaderboardEntry[];
 }
 
 export const GREEN_SPEED_FACTOR: Record<string, number> = {
