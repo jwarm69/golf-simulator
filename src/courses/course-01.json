@@ -1,0 +1,51 @@
+{
+  "name": "The Meadow - Hole 1",
+  "par": 3,
+  "tee": { "x": 0, "z": 30 },
+  "hole": { "x": 2, "z": -25 },
+  "zones": [
+    {
+      "type": "tee",
+      "shape": "rect",
+      "position": { "x": 0, "z": 30 },
+      "size": { "width": 4, "height": 4 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 0, "z": 5 },
+      "size": { "width": 10, "height": 46 }
+    },
+    {
+      "type": "green",
+      "shape": "circle",
+      "position": { "x": 2, "z": -25 },
+      "radius": 6
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": -5, "z": -22 },
+      "radius": 3
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 8, "z": -27 },
+      "radius": 2.5
+    },
+    {
+      "type": "water",
+      "shape": "rect",
+      "position": { "x": -8, "z": 0 },
+      "size": { "width": 6, "height": 8 }
+    }
+  ],
+  "obstacles": [
+    { "type": "tree", "position": { "x": 7, "z": 10, "y": 0 } },
+    { "type": "tree", "position": { "x": -6, "z": 15, "y": 0 } },
+    { "type": "tree", "position": { "x": 8, "z": -10, "y": 0 } },
+    { "type": "rock", "position": { "x": -4, "z": -15, "y": 0 } },
+    { "type": "tree", "position": { "x": -7, "z": -28, "y": 0 } }
+  ]
+}
