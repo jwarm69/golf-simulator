@@ -11,6 +11,11 @@
   },
   "tee": { "x": 0, "z": 30 },
   "hole": { "x": 2, "z": -25 },
+  "green": {
+    "slopeAngle": 225,
+    "slopeStrength": 0.35,
+    "speed": "medium"
+  },
   "zones": [
     {
       "type": "tee",

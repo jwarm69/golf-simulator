@@ -12,6 +12,7 @@ import { HUD } from '../ui/HUD';
 import {
   GameState, CourseData, BALL_RADIUS, ZONE_PHYSICS, CLUBS,
   DEFAULT_CLUB_INDEX, ClubData, THEME_CONFIGS, CourseTheme,
+  GREEN_SPEED_FACTOR,
 } from '../types';
 
 export class Game {
@@ -83,6 +84,10 @@ export class Game {
     this.currentHoleIndex = 0;
     this.scorecard = [];
     this.holePars = this.holes.map(h => h.par);
+
+    // Show hole selection on first load
+    const selectedIndex = await this.hud.showHoleSelect(this.holes);
+    this.currentHoleIndex = selectedIndex;
     await this.showTransitionThenSetup();
   }
 
@@ -101,6 +106,7 @@ export class Game {
       sponsor: course.sponsor,
       scorecard: this.scorecard,
       pars: this.holePars,
+      greenData: course.green,
     });
     this.waitingForTransition = false;
 
@@ -136,6 +142,7 @@ export class Game {
     this.hud.setSponsor(course.sponsor);
     this.updateCumulativeDisplay();
     this.hud.setScorecard(this.scorecard, this.holePars);
+    this.hud.showGreenRead(null); // hide initially
 
     // Init default club display
     this.clubIndex = DEFAULT_CLUB_INDEX;
@@ -212,8 +219,8 @@ export class Game {
     );
     this.hud.setDistance(dist);
 
-    // Update zone-based friction and rolling resistance
-    this.updateZoneFriction(dt);
+    // Update zone-based friction, rolling resistance, and green slope
+    this.updateZonePhysics(dt);
   }
 
   private cycleClub(delta: number) {
@@ -316,6 +323,7 @@ export class Game {
 
   private updateHoled(_dt: number) {
     this.cameraController.setMode('overview');
+    this.hud.showGreenRead(null);
   }
 
   private onHoled() {
@@ -398,14 +406,32 @@ export class Game {
     this.scorecard = [];
     this.holePin.clear();
     this.hud.hideMessage();
+
+    // Show hole select again
+    const selectedIndex = await this.hud.showHoleSelect(this.holes);
+    this.currentHoleIndex = selectedIndex;
     await this.showTransitionThenSetup();
   }
 
-  private updateZoneFriction(dt: number) {
+  private updateZonePhysics(dt: number) {
     const pos = this.ball.getPosition();
     const zone = this.terrain.getZoneAtPosition(pos.x, pos.z);
     const mat = this.physics.getMaterialForZone(zone);
     this.physics.groundBody.material = mat;
-    this.ball.applyRollingResistance(ZONE_PHYSICS[zone].rollingResistance, dt);
+
+    // Green-specific physics
+    if (zone === 'green' && this.course?.green) {
+      const greenData = this.course.green;
+      // Use green speed for rolling resistance instead of default
+      const greenRR = GREEN_SPEED_FACTOR[greenData.speed] ?? ZONE_PHYSICS.green.rollingResistance;
+      this.ball.applyRollingResistance(greenRR, dt);
+      // Apply slope/break force
+      this.ball.applySlopeForce(greenData.slopeAngle, greenData.slopeStrength, dt);
+      // Show green read HUD
+      this.hud.showGreenRead(greenData);
+    } else {
+      this.ball.applyRollingResistance(ZONE_PHYSICS[zone].rollingResistance, dt);
+      this.hud.showGreenRead(null);
+    }
   }
 }

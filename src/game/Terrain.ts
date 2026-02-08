@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { PhysicsWorld } from '../core/PhysicsWorld';
 import {
-  CourseData, ZoneData, ObstacleData, ZoneType,
+  CourseData, ZoneData, ObstacleData, ZoneType, GreenData,
   THEME_CONFIGS, CourseTheme, ThemeConfig,
 } from '../types';
 
@@ -21,6 +21,7 @@ export class Terrain {
   private bodies: CANNON.Body[] = [];
   private zoneBounds: ZoneBounds[] = [];
   private sponsorMeshes: THREE.Object3D[] = [];
+  private greenReadMeshes: THREE.Object3D[] = [];
   private currentThemeConfig: ThemeConfig = THEME_CONFIGS.meadow;
 
   constructor(scene: THREE.Scene, physics: PhysicsWorld) {
@@ -60,6 +61,14 @@ export class Terrain {
     // Build sponsor billboards
     if (course.sponsor) {
       this.addSponsorBillboards(course);
+    }
+
+    // Build green read indicators
+    if (course.green) {
+      const greenZone = course.zones.find(z => z.type === 'green');
+      if (greenZone) {
+        this.addGreenReadIndicators(greenZone, course.green, course.hole);
+      }
     }
   }
 
@@ -360,6 +369,124 @@ export class Terrain {
     }
   }
 
+  private addGreenReadIndicators(greenZone: ZoneData, greenData: GreenData, holePos: { x: number; z: number }) {
+    const cx = greenZone.position.x;
+    const cz = greenZone.position.z;
+    const radius = greenZone.radius ?? 5;
+
+    // Slope direction in radians
+    const slopeRad = (greenData.slopeAngle * Math.PI) / 180;
+    const slopeDirX = Math.cos(slopeRad);
+    const slopeDirZ = Math.sin(slopeRad);
+
+    // Speed color ring on the green surface
+    const speedColors: Record<string, number> = {
+      slow: 0x4a9e4a,
+      medium: 0x5ec85e,
+      fast: 0x7ee87e,
+    };
+    const ringGeo = new THREE.RingGeometry(radius - 0.6, radius - 0.15, 48);
+    const ringMat = new THREE.MeshStandardMaterial({
+      color: speedColors[greenData.speed] ?? 0x5ec85e,
+      transparent: true,
+      opacity: 0.4,
+      roughness: 0.9,
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(cx, 0.008, cz);
+    this.scene.add(ring);
+    this.greenReadMeshes.push(ring);
+
+    // Slope arrows scattered across the green
+    const arrowColor = 0xffffff;
+    const arrowOpacity = 0.3 + greenData.slopeStrength * 0.4;
+    const arrowPositions = this.getGreenArrowPositions(cx, cz, radius, holePos);
+
+    for (const ap of arrowPositions) {
+      const arrow = this.createSlopeArrow(arrowColor, arrowOpacity);
+      arrow.position.set(ap.x, 0.012, ap.z);
+      arrow.rotation.y = -slopeRad + Math.PI / 2;
+      this.scene.add(arrow);
+      this.greenReadMeshes.push(arrow);
+    }
+
+    // Speed label at edge of green (canvas texture)
+    const labelCanvas = document.createElement('canvas');
+    labelCanvas.width = 256;
+    labelCanvas.height = 64;
+    const lctx = labelCanvas.getContext('2d')!;
+    lctx.fillStyle = 'rgba(0,0,0,0.5)';
+    lctx.roundRect(0, 0, 256, 64, 10);
+    lctx.fill();
+    lctx.fillStyle = '#ffffff';
+    lctx.font = 'bold 28px Arial, sans-serif';
+    lctx.textAlign = 'center';
+    lctx.textBaseline = 'middle';
+    const speedLabel = greenData.speed.toUpperCase() + ' GREEN';
+    lctx.fillText(speedLabel, 128, 32);
+
+    const labelTexture = new THREE.CanvasTexture(labelCanvas);
+    const labelGeo = new THREE.PlaneGeometry(2.5, 0.6);
+    const labelMat = new THREE.MeshStandardMaterial({
+      map: labelTexture,
+      transparent: true,
+      roughness: 0.5,
+    });
+    const labelMesh = new THREE.Mesh(labelGeo, labelMat);
+    labelMesh.rotation.x = -Math.PI / 2;
+    labelMesh.position.set(cx, 0.015, cz + radius - 0.8);
+    this.scene.add(labelMesh);
+    this.greenReadMeshes.push(labelMesh);
+  }
+
+  private getGreenArrowPositions(cx: number, cz: number, radius: number, holePos: { x: number; z: number }): { x: number; z: number }[] {
+    const positions: { x: number; z: number }[] = [];
+    const spacing = 2.2;
+    const r2 = (radius - 1.0) * (radius - 1.0);
+    const holeR2 = 1.5 * 1.5; // avoid placing arrows near the hole cup
+
+    for (let dx = -radius + 1; dx <= radius - 1; dx += spacing) {
+      for (let dz = -radius + 1; dz <= radius - 1; dz += spacing) {
+        if (dx * dx + dz * dz < r2) {
+          const ax = cx + dx;
+          const az = cz + dz;
+          const hdx = ax - holePos.x;
+          const hdz = az - holePos.z;
+          if (hdx * hdx + hdz * hdz > holeR2) {
+            positions.push({ x: ax, z: az });
+          }
+        }
+      }
+    }
+    return positions;
+  }
+
+  private createSlopeArrow(color: number, opacity: number): THREE.Mesh {
+    // Small flat arrow shape (triangle + shaft)
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0.4);       // tip
+    shape.lineTo(-0.2, 0.15);   // left barb
+    shape.lineTo(-0.08, 0.15);  // inner left
+    shape.lineTo(-0.08, -0.3);  // shaft bottom left
+    shape.lineTo(0.08, -0.3);   // shaft bottom right
+    shape.lineTo(0.08, 0.15);   // inner right
+    shape.lineTo(0.2, 0.15);    // right barb
+    shape.closePath();
+
+    const geo = new THREE.ShapeGeometry(shape);
+    const mat = new THREE.MeshStandardMaterial({
+      color,
+      transparent: true,
+      opacity,
+      roughness: 0.8,
+      side: THREE.DoubleSide,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.x = -Math.PI / 2;
+    return mesh;
+  }
+
   getZoneAtPosition(x: number, z: number): ZoneType {
     for (let i = this.zoneBounds.length - 1; i >= 0; i--) {
       const zb = this.zoneBounds[i];
@@ -402,6 +529,13 @@ export class Terrain {
         }
       });
     }
+    for (const obj of this.greenReadMeshes) {
+      this.scene.remove(obj);
+      if (obj instanceof THREE.Mesh) {
+        obj.geometry.dispose();
+        (obj.material as THREE.Material).dispose();
+      }
+    }
     for (const body of this.bodies) {
       this.physics.removeBody(body);
     }
@@ -409,5 +543,6 @@ export class Terrain {
     this.bodies = [];
     this.zoneBounds = [];
     this.sponsorMeshes = [];
+    this.greenReadMeshes = [];
   }
 }

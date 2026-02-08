@@ -138,6 +138,21 @@ export class GolfBall {
     }
   }
 
+  applySlopeForce(slopeAngleDeg: number, slopeStrength: number, _dt: number) {
+    // Only apply when ball is on the ground
+    if (this.body.position.y > BALL_RADIUS + 0.05) return;
+
+    const slopeRad = (slopeAngleDeg * Math.PI) / 180;
+    const force = slopeStrength * 9.82 * BALL_MASS * 3.5;
+    this.body.applyForce(
+      new CANNON.Vec3(
+        Math.cos(slopeRad) * force,
+        0,
+        Math.sin(slopeRad) * force
+      )
+    );
+  }
+
   resetToLastStable() {
     this.setPosition(
       this.lastStablePosition.x,

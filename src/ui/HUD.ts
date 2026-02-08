@@ -1,4 +1,4 @@
-import { SponsorData } from '../types';
+import { SponsorData, CourseData, GreenData } from '../types';
 
 export class HUD {
   private container: HTMLElement;
@@ -10,6 +10,7 @@ export class HUD {
   private centerMessage!: HTMLElement;
   private aimHint!: HTMLElement;
   private transitionOverlay!: HTMLElement;
+  private greenReadEl!: HTMLElement;
 
   private holeNameEl!: HTMLElement;
   private shotInfoEl!: HTMLElement;
@@ -62,6 +63,11 @@ export class HUD {
     this.topRight.appendChild(this.distanceEl);
     this.topRight.appendChild(distLabel);
     this.container.appendChild(this.topRight);
+
+    // Green read info (bottom-left, shown when on the green)
+    this.greenReadEl = document.createElement('div');
+    this.greenReadEl.className = 'green-read';
+    this.container.appendChild(this.greenReadEl);
 
     // Sponsor banner (bottom-right)
     this.sponsorBanner = document.createElement('div');
@@ -181,6 +187,126 @@ export class HUD {
     this.sponsorBanner.classList.add('visible');
   }
 
+  showGreenRead(greenData: GreenData | null | undefined) {
+    if (!greenData) {
+      this.greenReadEl.classList.remove('visible');
+      return;
+    }
+
+    const directionNames: Record<number, string> = {
+      0: 'E', 45: 'SE', 90: 'S', 135: 'SW',
+      180: 'W', 225: 'NW', 270: 'N', 315: 'NE',
+    };
+    // Find closest compass direction
+    const normalized = ((greenData.slopeAngle % 360) + 360) % 360;
+    let closestDir = 'E';
+    let closestDist = 360;
+    for (const [deg, name] of Object.entries(directionNames)) {
+      const d = Math.abs(normalized - Number(deg));
+      const wrapped = Math.min(d, 360 - d);
+      if (wrapped < closestDist) {
+        closestDist = wrapped;
+        closestDir = name;
+      }
+    }
+
+    const strengthLabel = greenData.slopeStrength < 0.3 ? 'Slight' : greenData.slopeStrength < 0.6 ? 'Moderate' : 'Strong';
+    const speedLabel = greenData.speed.charAt(0).toUpperCase() + greenData.speed.slice(1);
+
+    // Arrow character for slope direction
+    const arrowMap: Record<string, string> = {
+      N: '\u2191', NE: '\u2197', E: '\u2192', SE: '\u2198',
+      S: '\u2193', SW: '\u2199', W: '\u2190', NW: '\u2196',
+    };
+
+    this.greenReadEl.innerHTML =
+      `<div class="green-read-title">GREEN READ</div>`
+      + `<div class="green-read-row"><span class="green-read-arrow">${arrowMap[closestDir]}</span> ${strengthLabel} break ${closestDir}</div>`
+      + `<div class="green-read-row">${speedLabel} speed</div>`;
+
+    this.greenReadEl.classList.add('visible');
+  }
+
+  showHoleSelect(holes: CourseData[]): Promise<number> {
+    return new Promise((resolve) => {
+      this.transitionOverlay.innerHTML = '';
+
+      const title = document.createElement('div');
+      title.className = 'hole-select-title';
+      title.textContent = 'SELECT A HOLE';
+      this.transitionOverlay.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'hole-select-grid';
+
+      holes.forEach((hole, i) => {
+        const card = document.createElement('div');
+        card.className = 'hole-select-card';
+
+        const themeColors: Record<string, string> = {
+          meadow: '#4a8c3f',
+          desert: '#c44b00',
+          arctic: '#4a7a9b',
+        };
+        const themeColor = themeColors[hole.theme ?? 'meadow'] ?? '#4a8c3f';
+        card.style.borderColor = themeColor;
+
+        const num = document.createElement('div');
+        num.className = 'hole-select-num';
+        num.textContent = `${i + 1}`;
+        num.style.background = themeColor;
+
+        const name = document.createElement('div');
+        name.className = 'hole-select-name';
+        name.textContent = hole.name;
+
+        const info = document.createElement('div');
+        info.className = 'hole-select-info';
+        info.textContent = `Par ${hole.par}`;
+
+        const theme = document.createElement('div');
+        theme.className = 'hole-select-theme';
+        theme.textContent = (hole.theme ?? 'meadow').charAt(0).toUpperCase() + (hole.theme ?? 'meadow').slice(1);
+        theme.style.color = themeColor;
+
+        card.appendChild(num);
+        card.appendChild(name);
+        card.appendChild(info);
+        card.appendChild(theme);
+
+        if (hole.green) {
+          const greenInfo = document.createElement('div');
+          greenInfo.className = 'hole-select-green';
+          greenInfo.textContent = `${hole.green.speed} green`;
+          card.appendChild(greenInfo);
+        }
+
+        card.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.transitionOverlay.classList.remove('visible');
+          resolve(i);
+        });
+
+        grid.appendChild(card);
+      });
+
+      this.transitionOverlay.appendChild(grid);
+
+      // "Play All" button
+      const playAll = document.createElement('div');
+      playAll.className = 'hole-select-play-all';
+      playAll.textContent = 'Play All (start from Hole 1)';
+      playAll.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.transitionOverlay.classList.remove('visible');
+        resolve(0);
+      });
+      this.transitionOverlay.appendChild(playAll);
+
+      this.transitionOverlay.classList.add('visible');
+    });
+  }
+
   showTransition(opts: {
     holeName: string;
     holeNumber: number;
@@ -189,6 +315,7 @@ export class HUD {
     sponsor?: SponsorData;
     scorecard: number[];
     pars: number[];
+    greenData?: GreenData;
   }): Promise<void> {
     return new Promise((resolve) => {
       this.transitionOverlay.innerHTML = '';
@@ -231,6 +358,16 @@ export class HUD {
       infoEl.className = 'transition-hole-info';
       infoEl.textContent = `Hole ${opts.holeNumber} of ${opts.totalHoles}  |  Par ${opts.par}`;
       this.transitionOverlay.appendChild(infoEl);
+
+      // Green info
+      if (opts.greenData) {
+        const speedLabel = opts.greenData.speed.charAt(0).toUpperCase() + opts.greenData.speed.slice(1);
+        const strengthLabel = opts.greenData.slopeStrength < 0.3 ? 'slight' : opts.greenData.slopeStrength < 0.6 ? 'moderate' : 'strong';
+        const greenEl = document.createElement('div');
+        greenEl.className = 'transition-green-info';
+        greenEl.textContent = `${speedLabel} green  |  ${strengthLabel} break`;
+        this.transitionOverlay.appendChild(greenEl);
+      }
 
       // Sponsor callout
       if (opts.sponsor) {

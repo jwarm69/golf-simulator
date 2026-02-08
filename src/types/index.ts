@@ -37,6 +37,12 @@ export interface ObstacleData {
   position: Vec3;
 }
 
+export interface GreenData {
+  slopeAngle: number;      // degrees — direction the ball breaks toward (0=+x, 90=+z, 180=-x, 270=-z)
+  slopeStrength: number;   // 0-1 scale — how much force the slope exerts
+  speed: 'slow' | 'medium' | 'fast'; // stimp rating category
+}
+
 export interface CourseData {
   name: string;
   par: number;
@@ -46,7 +52,14 @@ export interface CourseData {
   obstacles: ObstacleData[];
   theme?: CourseTheme;
   sponsor?: SponsorData;
+  green?: GreenData;
 }
+
+export const GREEN_SPEED_FACTOR: Record<string, number> = {
+  slow: 0.08,
+  medium: 0.06,
+  fast: 0.04,
+};
 
 export interface ThemeConfig {
   skyColor: number;
