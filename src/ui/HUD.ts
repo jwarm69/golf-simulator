@@ -61,7 +61,9 @@ export class HUD {
 
     this.powerLabel = document.createElement('div');
     this.powerLabel.className = 'power-meter-label';
-    this.powerLabel.textContent = 'Hold SPACE to set power';
+    this.powerLabel.textContent = this.isTouchDevice()
+      ? 'Tap to shoot!'
+      : 'Hold SPACE to set power';
     this.container.appendChild(this.powerLabel);
 
     // Center message
@@ -96,7 +98,9 @@ export class HUD {
     // Aim hint
     this.aimHint = document.createElement('div');
     this.aimHint.className = 'aim-hint';
-    this.aimHint.textContent = 'A/D to aim  |  Q/E change club  |  SPACE to shoot  |  Scroll to adjust view';
+    this.aimHint.textContent = this.isTouchDevice()
+      ? 'Swipe to aim  |  Tap to charge  |  Tap again to shoot'
+      : 'A/D to aim  |  Q/E change club  |  SPACE to shoot  |  Scroll to adjust view';
     this.container.appendChild(this.aimHint);
   }
 
@@ -151,6 +155,10 @@ export class HUD {
 
   setClub(name: string, maxDist: number) {
     this.clubEl.textContent = `${name}  —  ${maxDist}m`;
+  }
+
+  private isTouchDevice(): boolean {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   }
 
   setScorecard(scores: number[], par: number) {

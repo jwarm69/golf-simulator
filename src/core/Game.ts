@@ -202,6 +202,7 @@ export class Game {
 
       this.state = 'rolling';
       this.cameraController.setMode('follow');
+      this.input.resetTouchCharging();
     }
   }
 
@@ -220,6 +221,7 @@ export class Game {
       setTimeout(() => this.hud.hideMessage(), 2000);
       this.state = 'stopped';
       this.cameraController.setMode('aim');
+      this.input.resetTouchCharging();
       return;
     }
 

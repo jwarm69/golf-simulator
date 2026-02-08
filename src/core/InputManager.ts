@@ -29,6 +29,7 @@ export class InputManager {
   private touchStartY = 0;
   private isTouchDragging = false;
   touchDragDeltaX = 0;
+  private touchCharging = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -152,10 +153,18 @@ export class InputManager {
     return d;
   }
 
-  simulateSpaceTap() {
+  simulateSpacePress() {
     this._spacePressed = true;
+    this.spaceDown = true;
+  }
+
+  simulateSpaceRelease() {
     this._spaceReleased = true;
     this.spaceDown = false;
+  }
+
+  resetTouchCharging() {
+    this.touchCharging = false;
   }
 
   private onTouchStart(e: TouchEvent) {
@@ -178,9 +187,16 @@ export class InputManager {
 
   private onTouchEnd(e: TouchEvent) {
     e.preventDefault();
-    // If it was a tap (not a drag), simulate space press+release
+    // If it was a tap (not a drag), use two-tap flow:
+    // First tap starts charging, second tap fires the shot
     if (!this.isTouchDragging) {
-      this.simulateSpaceTap();
+      if (!this.touchCharging) {
+        this.simulateSpacePress();
+        this.touchCharging = true;
+      } else {
+        this.simulateSpaceRelease();
+        this.touchCharging = false;
+      }
     }
     this.isTouchDragging = false;
   }
