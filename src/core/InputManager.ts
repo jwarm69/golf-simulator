@@ -153,9 +153,14 @@ export class InputManager {
   }
 
   simulateSpaceTap() {
-    this._spacePressed = true;
-    this._spaceReleased = true;
-    this.spaceDown = false;
+    // Two-tap toggle: first tap starts charging, second tap releases
+    if (!this.spaceDown) {
+      this.spaceDown = true;
+      this._spacePressed = true;
+    } else {
+      this.spaceDown = false;
+      this._spaceReleased = true;
+    }
   }
 
   private onTouchStart(e: TouchEvent) {

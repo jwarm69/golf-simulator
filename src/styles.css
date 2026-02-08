@@ -633,6 +633,45 @@ body {
   color: #6ec85e;
 }
 
+/* Flyover / Hole View button */
+.flyover-btn {
+  position: absolute;
+  top: 80px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, background 0.2s, border-color 0.2s;
+  backdrop-filter: blur(4px);
+  z-index: 5;
+}
+
+.flyover-btn.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.flyover-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.flyover-btn.active {
+  background: rgba(200, 50, 50, 0.6);
+  border-color: rgba(255, 100, 100, 0.5);
+}
+
+.flyover-btn.active:hover {
+  background: rgba(200, 50, 50, 0.8);
+}
+
 .crosshair {
   position: absolute;
   top: 50%;

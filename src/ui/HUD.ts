@@ -13,6 +13,7 @@ export class HUD {
   private greenReadEl!: HTMLElement;
   private windIndicator!: HTMLElement;
   private leaderboardEl!: HTMLElement;
+  private flyoverBtn!: HTMLElement;
 
   private holeNameEl!: HTMLElement;
   private shotInfoEl!: HTMLElement;
@@ -25,6 +26,7 @@ export class HUD {
 
   onClubPrev?: () => void;
   onClubNext?: () => void;
+  onFlyover?: () => void;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -65,6 +67,21 @@ export class HUD {
     this.topRight.appendChild(this.distanceEl);
     this.topRight.appendChild(distLabel);
     this.container.appendChild(this.topRight);
+
+    // Flyover button (top-right area, below distance)
+    this.flyoverBtn = document.createElement('button');
+    this.flyoverBtn.className = 'flyover-btn';
+    this.flyoverBtn.innerHTML = '\uD83C\uDFCC\uFE0F Hole View';
+    this.flyoverBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.onFlyover?.();
+    });
+    this.flyoverBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.onFlyover?.();
+    });
+    this.container.appendChild(this.flyoverBtn);
 
     // Wind indicator (top-center)
     this.windIndicator = document.createElement('div');
@@ -136,7 +153,7 @@ export class HUD {
     // Aim hint
     this.aimHint = document.createElement('div');
     this.aimHint.className = 'aim-hint';
-    this.aimHint.textContent = 'A/D to aim  |  Q/E change club  |  SPACE to shoot  |  Scroll to adjust view';
+    this.aimHint.textContent = 'A/D to aim  |  Q/E change club  |  SPACE to shoot  |  F hole view  |  Scroll to adjust';
     this.container.appendChild(this.aimHint);
   }
 
@@ -602,5 +619,19 @@ export class HUD {
 
   hideLeaderboard() {
     this.leaderboardEl.classList.remove('visible');
+  }
+
+  showFlyoverBtn(visible: boolean) {
+    this.flyoverBtn.classList.toggle('visible', visible);
+  }
+
+  setFlyoverActive(active: boolean) {
+    if (active) {
+      this.flyoverBtn.innerHTML = '\u2716 Exit View';
+      this.flyoverBtn.classList.add('active');
+    } else {
+      this.flyoverBtn.innerHTML = '\uD83C\uDFCC\uFE0F Hole View';
+      this.flyoverBtn.classList.remove('active');
+    }
   }
 }

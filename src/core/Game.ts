@@ -78,6 +78,9 @@ export class Game {
     // Mobile club buttons
     this.hud.onClubPrev = () => this.cycleClub(-1);
     this.hud.onClubNext = () => this.cycleClub(1);
+
+    // Flyover button
+    this.hud.onFlyover = () => this.toggleFlyover();
   }
 
   async loadCourse(path: string) {
@@ -156,6 +159,11 @@ export class Game {
     this.updateCumulativeDisplay();
     this.hud.setScorecard(this.scorecard, this.holePars);
     this.hud.showGreenRead(null); // hide initially
+    this.hud.showFlyoverBtn(true);
+    this.hud.setFlyoverActive(false);
+
+    // Set hole endpoints for flyover camera
+    this.cameraController.setHoleEndpoints(course.tee, course.hole);
 
     // Init default club display
     this.clubIndex = DEFAULT_CLUB_INDEX;
@@ -220,9 +228,16 @@ export class Game {
     this.ball.update(dt);
 
     // Update camera
-    this.cameraController.setTarget(this.ball.getPosition());
-    this.cameraController.setBallVelocity(this.ball.getVelocity());
-    this.cameraController.update();
+    if (this.cameraController.getMode() !== 'flyover') {
+      this.cameraController.setTarget(this.ball.getPosition());
+      this.cameraController.setBallVelocity(this.ball.getVelocity());
+    }
+    this.cameraController.update(dt);
+
+    // Auto-exit flyover when sweep completes
+    if (this.cameraController.isFlyoverComplete()) {
+      this.exitFlyover();
+    }
 
     // Update distance display
     const ballPos = this.ball.getPosition();
@@ -258,6 +273,17 @@ export class Game {
   }
 
   private updateAiming(_dt: number) {
+    // Handle flyover mode — don't process aiming while in flyover
+    if (this.cameraController.getMode() === 'flyover') {
+      // Allow F key or space to exit flyover early
+      if (this.input.consumeKeyPress('f') || this.input.consumeSpacePress()) {
+        this.exitFlyover();
+      }
+      // Consume other inputs so they don't queue up
+      this.input.consumeSpaceRelease();
+      return;
+    }
+
     this.hud.showAimHint(true);
     this.hud.showPowerMeter(false);
     this.hud.hideMessage();
@@ -267,6 +293,12 @@ export class Game {
     // Club selection
     if (this.input.consumeKeyPress('q')) this.cycleClub(-1);
     if (this.input.consumeKeyPress('e')) this.cycleClub(1);
+
+    // F key to trigger flyover
+    if (this.input.consumeKeyPress('f')) {
+      this.toggleFlyover();
+      return;
+    }
 
     // Show trajectory preview at default power
     const ballPos = this.ball.getPosition();
@@ -396,6 +428,7 @@ export class Game {
     }
 
     this.hud.showAimHint(false);
+    this.hud.showFlyoverBtn(false);
 
     // Save to leaderboard when all holes are done
     if (!hasNextHole) {
@@ -448,6 +481,25 @@ export class Game {
     const selectedIndex = await this.hud.showHoleSelect(this.holes);
     this.currentHoleIndex = selectedIndex;
     await this.showTransitionThenSetup();
+  }
+
+  private toggleFlyover() {
+    if (this.state !== 'aiming') return;
+    if (this.cameraController.getMode() === 'flyover') {
+      this.exitFlyover();
+    } else {
+      this.cameraController.setMode('flyover');
+      this.hud.setFlyoverActive(true);
+      this.hud.showAimHint(false);
+      this.trajectoryPreview.setVisible(false);
+    }
+  }
+
+  private exitFlyover() {
+    this.cameraController.setTarget(this.ball.getPosition());
+    this.cameraController.setMode('aim');
+    this.hud.setFlyoverActive(false);
+    this.hud.showAimHint(true);
   }
 
   private updateZonePhysics(dt: number) {

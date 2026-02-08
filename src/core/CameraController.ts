@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { InputManager } from './InputManager';
 
-export type CameraMode = 'aim' | 'follow' | 'overview';
+export type CameraMode = 'aim' | 'follow' | 'overview' | 'flyover';
 
 export class CameraController {
   private camera: THREE.PerspectiveCamera;
   private input: InputManager;
   private mode: CameraMode = 'aim';
+  private previousMode: CameraMode = 'aim';
 
   // Orbit parameters (aim mode)
   private orbitAngle = 0; // horizontal angle around ball
@@ -20,6 +21,15 @@ export class CameraController {
   private followOffset = new THREE.Vector3(0, 4, 8);
   private ballVelocity = new THREE.Vector3();
 
+  // Flyover mode
+  private flyoverTee = new THREE.Vector3();
+  private flyoverHole = new THREE.Vector3();
+  private flyoverProgress = 0;       // 0 = tee, 1 = hole, then reverses
+  private flyoverSpeed = 0.15;       // progress per second
+  private flyoverDirection = 1;      // 1 = tee->hole, -1 = hole->tee
+  private flyoverHeight = 35;
+  private flyoverLateralOffset = 12;
+
   // Lerp smoothing
   private lerpFactor = 0.08;
 
@@ -29,9 +39,16 @@ export class CameraController {
   }
 
   setMode(mode: CameraMode) {
+    if (mode !== 'flyover' && this.mode !== 'flyover') {
+      this.previousMode = this.mode;
+    }
     this.mode = mode;
     if (mode === 'overview') {
       this.lerpFactor = 0.03;
+    } else if (mode === 'flyover') {
+      this.lerpFactor = 0.04;
+      this.flyoverProgress = 0;
+      this.flyoverDirection = 1;
     } else {
       this.lerpFactor = 0.08;
     }
@@ -39,6 +56,19 @@ export class CameraController {
 
   getMode(): CameraMode {
     return this.mode;
+  }
+
+  getPreviousMode(): CameraMode {
+    return this.previousMode;
+  }
+
+  setHoleEndpoints(tee: { x: number; z: number }, hole: { x: number; z: number }) {
+    this.flyoverTee.set(tee.x, 0, tee.z);
+    this.flyoverHole.set(hole.x, 0, hole.z);
+  }
+
+  isFlyoverComplete(): boolean {
+    return this.mode === 'flyover' && this.flyoverDirection === -1 && this.flyoverProgress <= 0;
   }
 
   setTarget(pos: THREE.Vector3) {
@@ -53,13 +83,15 @@ export class CameraController {
     return this.orbitAngle;
   }
 
-  update() {
+  update(dt?: number) {
     if (this.mode === 'aim') {
       this.updateAim();
     } else if (this.mode === 'follow') {
       this.updateFollow();
     } else if (this.mode === 'overview') {
       this.updateOverview();
+    } else if (this.mode === 'flyover') {
+      this.updateFlyover(dt ?? 0.016);
     }
   }
 
@@ -141,5 +173,41 @@ export class CameraController {
 
     this.camera.position.lerp(desiredPos, this.lerpFactor);
     this.camera.lookAt(this.target);
+  }
+
+  private updateFlyover(dt: number) {
+    // Advance progress along the tee-to-hole path
+    this.flyoverProgress += this.flyoverDirection * this.flyoverSpeed * dt;
+
+    if (this.flyoverProgress >= 1) {
+      this.flyoverProgress = 1;
+      this.flyoverDirection = -1; // reverse back to tee
+    } else if (this.flyoverProgress <= 0 && this.flyoverDirection === -1) {
+      this.flyoverProgress = 0;
+      // Flyover complete — caller will detect via isFlyoverComplete()
+    }
+
+    // Smooth easing (ease-in-out)
+    const t = this.flyoverProgress;
+    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+    // Interpolate look-at point along tee→hole
+    const lookAt = new THREE.Vector3().lerpVectors(this.flyoverTee, this.flyoverHole, eased);
+
+    // Camera direction perpendicular to the tee→hole line (for lateral offset)
+    const dir = new THREE.Vector3().subVectors(this.flyoverHole, this.flyoverTee).normalize();
+    const lateral = new THREE.Vector3(-dir.z, 0, dir.x); // perpendicular
+
+    // Swing the camera in a gentle arc — offset laterally and high above
+    const arcOffset = Math.sin(eased * Math.PI) * this.flyoverLateralOffset;
+
+    const desiredPos = new THREE.Vector3(
+      lookAt.x + lateral.x * arcOffset,
+      this.flyoverHeight - Math.sin(eased * Math.PI) * 8, // dip lower at midpoint for drama
+      lookAt.z + lateral.z * arcOffset
+    );
+
+    this.camera.position.lerp(desiredPos, this.lerpFactor);
+    this.camera.lookAt(lookAt);
   }
 }
