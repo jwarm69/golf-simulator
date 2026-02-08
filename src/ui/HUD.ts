@@ -9,6 +9,7 @@ export class HUD {
   private powerLabel!: HTMLElement;
   private centerMessage!: HTMLElement;
   private aimHint!: HTMLElement;
+  private transitionOverlay!: HTMLElement;
 
   private holeNameEl!: HTMLElement;
   private shotInfoEl!: HTMLElement;
@@ -17,6 +18,7 @@ export class HUD {
   private scorecardEl!: HTMLElement;
   private sponsorBanner!: HTMLElement;
   private holeProgressEl!: HTMLElement;
+  private cumulativeScoreEl!: HTMLElement;
 
   onClubPrev?: () => void;
   onClubNext?: () => void;
@@ -29,7 +31,7 @@ export class HUD {
   private build() {
     this.container.innerHTML = '';
 
-    // Top left: hole name + shot info
+    // Top left: hole name + shot info + progress + scorecard
     this.topLeft = document.createElement('div');
     this.topLeft.className = 'hud-top-left';
     this.holeNameEl = document.createElement('div');
@@ -38,11 +40,14 @@ export class HUD {
     this.shotInfoEl.className = 'shot-info';
     this.holeProgressEl = document.createElement('div');
     this.holeProgressEl.className = 'hole-progress';
+    this.cumulativeScoreEl = document.createElement('div');
+    this.cumulativeScoreEl.className = 'cumulative-score';
     this.scorecardEl = document.createElement('div');
     this.scorecardEl.className = 'scorecard';
     this.topLeft.appendChild(this.holeNameEl);
     this.topLeft.appendChild(this.shotInfoEl);
     this.topLeft.appendChild(this.holeProgressEl);
+    this.topLeft.appendChild(this.cumulativeScoreEl);
     this.topLeft.appendChild(this.scorecardEl);
     this.container.appendChild(this.topLeft);
 
@@ -62,6 +67,11 @@ export class HUD {
     this.sponsorBanner = document.createElement('div');
     this.sponsorBanner.className = 'sponsor-banner';
     this.container.appendChild(this.sponsorBanner);
+
+    // Transition overlay (between holes)
+    this.transitionOverlay = document.createElement('div');
+    this.transitionOverlay.className = 'transition-overlay';
+    this.container.appendChild(this.transitionOverlay);
 
     // Power meter
     this.powerContainer = document.createElement('div');
@@ -128,6 +138,16 @@ export class HUD {
     this.holeProgressEl.textContent = `Hole ${current} of ${total}`;
   }
 
+  setCumulativeScore(totalStrokes: number, totalPar: number) {
+    if (totalStrokes === 0) {
+      this.cumulativeScoreEl.textContent = '';
+      return;
+    }
+    const diff = totalStrokes - totalPar;
+    const label = diff === 0 ? 'E' : (diff > 0 ? `+${diff}` : `${diff}`);
+    this.cumulativeScoreEl.textContent = `Round: ${totalStrokes} strokes (${label})`;
+  }
+
   setSponsor(sponsor: SponsorData | undefined) {
     if (!sponsor) {
       this.sponsorBanner.classList.remove('visible');
@@ -159,6 +179,92 @@ export class HUD {
     }
 
     this.sponsorBanner.classList.add('visible');
+  }
+
+  showTransition(opts: {
+    holeName: string;
+    holeNumber: number;
+    totalHoles: number;
+    par: number;
+    sponsor?: SponsorData;
+    scorecard: number[];
+    pars: number[];
+  }): Promise<void> {
+    return new Promise((resolve) => {
+      this.transitionOverlay.innerHTML = '';
+
+      // Running score summary (if any holes completed)
+      if (opts.scorecard.length > 0) {
+        const summaryEl = document.createElement('div');
+        summaryEl.className = 'transition-summary';
+
+        const totalStrokes = opts.scorecard.reduce((a, b) => a + b, 0);
+        const totalPar = opts.pars.slice(0, opts.scorecard.length).reduce((a, b) => a + b, 0);
+        const diff = totalStrokes - totalPar;
+        const diffLabel = diff === 0 ? 'Even' : (diff > 0 ? `+${diff}` : `${diff}`);
+
+        summaryEl.innerHTML = `<div class="transition-score-label">Score so far</div>`
+          + `<div class="transition-score-value">${totalStrokes} (${diffLabel})</div>`
+          + `<div class="transition-score-holes">${opts.scorecard.map((s, i) => {
+              const d = s - opts.pars[i];
+              const l = d === 0 ? 'E' : (d > 0 ? `+${d}` : `${d}`);
+              return `H${i + 1}: ${s}(${l})`;
+            }).join('  ')}</div>`;
+
+        this.transitionOverlay.appendChild(summaryEl);
+      }
+
+      // "UP NEXT" label
+      const upNextLabel = document.createElement('div');
+      upNextLabel.className = 'transition-up-next';
+      upNextLabel.textContent = opts.scorecard.length === 0 ? 'FIRST HOLE' : 'UP NEXT';
+      this.transitionOverlay.appendChild(upNextLabel);
+
+      // Hole name
+      const nameEl = document.createElement('div');
+      nameEl.className = 'transition-hole-name';
+      nameEl.textContent = opts.holeName;
+      this.transitionOverlay.appendChild(nameEl);
+
+      // Hole info
+      const infoEl = document.createElement('div');
+      infoEl.className = 'transition-hole-info';
+      infoEl.textContent = `Hole ${opts.holeNumber} of ${opts.totalHoles}  |  Par ${opts.par}`;
+      this.transitionOverlay.appendChild(infoEl);
+
+      // Sponsor callout
+      if (opts.sponsor) {
+        const tierLabels = { hole: 'Sponsored by', course: 'Course Sponsor', designer: 'Designed by' };
+        const sponsorEl = document.createElement('div');
+        sponsorEl.className = 'transition-sponsor';
+        sponsorEl.innerHTML = `<span class="transition-sponsor-tier">${tierLabels[opts.sponsor.tier]}</span> `
+          + `<span class="transition-sponsor-name" style="color:${opts.sponsor.primaryColor}">${opts.sponsor.name}</span>`;
+        this.transitionOverlay.appendChild(sponsorEl);
+      }
+
+      // Click prompt
+      const clickEl = document.createElement('div');
+      clickEl.className = 'transition-click';
+      clickEl.textContent = 'Click to tee off';
+      this.transitionOverlay.appendChild(clickEl);
+
+      // Show
+      this.transitionOverlay.classList.add('visible');
+
+      const onClick = () => {
+        window.removeEventListener('click', onClick);
+        this.transitionOverlay.classList.remove('visible');
+        resolve();
+      };
+      // Short delay so the overlay is readable before accepting clicks
+      setTimeout(() => {
+        window.addEventListener('click', onClick);
+      }, 800);
+    });
+  }
+
+  hideTransition() {
+    this.transitionOverlay.classList.remove('visible');
   }
 
   showPowerMeter(visible: boolean) {
@@ -203,12 +309,23 @@ export class HUD {
   }
 
   setScorecard(scores: number[], pars: number[]) {
+    if (scores.length === 0) {
+      this.scorecardEl.textContent = '';
+      return;
+    }
     const parts = scores.map((s, i) => {
       const par = pars[i] ?? pars[0];
       const diff = s - par;
       const label = diff === 0 ? 'E' : (diff > 0 ? `+${diff}` : `${diff}`);
       return `H${i + 1}: ${s} (${label})`;
     });
+
+    const totalStrokes = scores.reduce((a, b) => a + b, 0);
+    const totalPar = pars.slice(0, scores.length).reduce((a, b) => a + b, 0);
+    const totalDiff = totalStrokes - totalPar;
+    const totalLabel = totalDiff === 0 ? 'E' : (totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`);
+    parts.push(`Total: ${totalStrokes} (${totalLabel})`);
+
     this.scorecardEl.textContent = parts.join('  |  ');
   }
 }

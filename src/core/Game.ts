@@ -40,6 +40,7 @@ export class Game {
   private currentHoleIndex = 0;
   private scorecard: number[] = [];
   private holePars: number[] = [];
+  private waitingForTransition = false;
 
   // Trajectory preview
   private trajectoryPreview: TrajectoryPreview;
@@ -74,7 +75,7 @@ export class Game {
     this.currentHoleIndex = 0;
     this.scorecard = [];
     this.holePars = [course.par];
-    this.setupHole(course);
+    await this.showTransitionThenSetup();
   }
 
   async loadCourses(paths: string[]) {
@@ -82,10 +83,32 @@ export class Game {
     this.currentHoleIndex = 0;
     this.scorecard = [];
     this.holePars = this.holes.map(h => h.par);
-    this.setupHole(this.holes[0]);
+    await this.showTransitionThenSetup();
   }
 
-  private setupHole(course: CourseData) {
+  private async showTransitionThenSetup() {
+    const course = this.holes[this.currentHoleIndex];
+
+    // Build the terrain/scene in background so the player sees the course behind the overlay
+    this.buildHoleScene(course);
+
+    this.waitingForTransition = true;
+    await this.hud.showTransition({
+      holeName: course.name,
+      holeNumber: this.currentHoleIndex + 1,
+      totalHoles: this.holes.length,
+      par: course.par,
+      sponsor: course.sponsor,
+      scorecard: this.scorecard,
+      pars: this.holePars,
+    });
+    this.waitingForTransition = false;
+
+    // Now activate gameplay
+    this.activateHole(course);
+  }
+
+  private buildHoleScene(course: CourseData) {
     this.course = course;
 
     // Apply theme
@@ -99,22 +122,40 @@ export class Game {
     // Place ball at tee
     this.ball.setPosition(course.tee.x, BALL_RADIUS + 0.01, course.tee.z);
 
-    // Setup HUD
+    // Camera initial position (overview during transition)
+    this.cameraController.setTarget(this.ball.getPosition());
+    this.cameraController.setMode('overview');
+  }
+
+  private activateHole(course: CourseData) {
+    // Setup HUD for active play
     this.hud.setHoleName(course.name);
     this.shotCount = 0;
     this.hud.setShotInfo(this.shotCount, course.par);
     this.hud.setHoleProgress(this.currentHoleIndex + 1, this.holes.length);
     this.hud.setSponsor(course.sponsor);
+    this.updateCumulativeDisplay();
+    this.hud.setScorecard(this.scorecard, this.holePars);
 
     // Init default club display
     this.clubIndex = DEFAULT_CLUB_INDEX;
     this.cycleClub(0);
 
-    // Camera initial position
+    // Camera to aim mode
     this.cameraController.setTarget(this.ball.getPosition());
     this.cameraController.setMode('aim');
 
     this.state = 'aiming';
+  }
+
+  private updateCumulativeDisplay() {
+    if (this.scorecard.length === 0) {
+      this.hud.setCumulativeScore(0, 0);
+      return;
+    }
+    const totalStrokes = this.scorecard.reduce((a, b) => a + b, 0);
+    const totalPar = this.holePars.slice(0, this.scorecard.length).reduce((a, b) => a + b, 0);
+    this.hud.setCumulativeScore(totalStrokes, totalPar);
   }
 
   start() {
@@ -134,7 +175,7 @@ export class Game {
   };
 
   private update(dt: number) {
-    if (!this.course) return;
+    if (!this.course || this.waitingForTransition) return;
 
     switch (this.state) {
       case 'aiming':
@@ -292,52 +333,72 @@ export class Game {
 
     this.scorecard.push(this.shotCount);
     this.hud.setScorecard(this.scorecard, this.holePars);
+    this.updateCumulativeDisplay();
 
     const hasNextHole = this.currentHoleIndex < this.holes.length - 1;
 
+    // Build cumulative score line
+    const totalStrokes = this.scorecard.reduce((a, b) => a + b, 0);
+    const totalPar = this.holePars.slice(0, this.scorecard.length).reduce((a, b) => a + b, 0);
+    const totalDiff = totalStrokes - totalPar;
+    const totalLabel = totalDiff === 0 ? 'Even' : (totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`);
+    const scoreLine = this.holes.length > 1
+      ? `<br>Round: ${totalStrokes} strokes (${totalLabel})`
+      : '';
+
     if (hasNextHole) {
-      this.hud.showMessage(label, `${this.shotCount} shot${this.shotCount > 1 ? 's' : ''} on a Par ${par}<br>Click for next hole`);
-    } else if (this.holes.length > 1) {
-      // Final hole - show total score
-      const totalStrokes = this.scorecard.reduce((a, b) => a + b, 0);
-      const totalPar = this.holePars.reduce((a, b) => a + b, 0);
-      const totalDiff = totalStrokes - totalPar;
-      const totalLabel = totalDiff === 0 ? 'Even' : (totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`);
       this.hud.showMessage(
         label,
-        `${this.shotCount} shot${this.shotCount > 1 ? 's' : ''} on a Par ${par}<br>Round complete! Total: ${totalStrokes} (${totalLabel})<br>Click to play again`
+        `${this.shotCount} shot${this.shotCount > 1 ? 's' : ''} on a Par ${par}${scoreLine}`
+      );
+    } else if (this.holes.length > 1) {
+      this.hud.showMessage(
+        label,
+        `${this.shotCount} shot${this.shotCount > 1 ? 's' : ''} on a Par ${par}`
+          + `<br>Round complete! Final: ${totalStrokes} strokes (${totalLabel})`
       );
     } else {
-      this.hud.showMessage(label, `${this.shotCount} shot${this.shotCount > 1 ? 's' : ''} on a Par ${par}<br>Click to play again`);
+      this.hud.showMessage(
+        label,
+        `${this.shotCount} shot${this.shotCount > 1 ? 's' : ''} on a Par ${par}`
+      );
     }
 
     this.hud.showAimHint(false);
 
-    // Allow advancement after delay
+    // After a delay, show next-hole transition or restart prompt
     setTimeout(() => {
-      const onClick = () => {
-        window.removeEventListener('click', onClick);
-        if (hasNextHole) {
-          this.advanceToNextHole();
-        } else {
+      if (hasNextHole) {
+        this.advanceToNextHole();
+      } else {
+        // Add "click to play again" to the existing message
+        const replayMsg = this.holes.length > 1
+          ? `${this.shotCount} shot${this.shotCount > 1 ? 's' : ''} on a Par ${par}<br>Round complete! Final: ${totalStrokes} strokes (${totalLabel})<br>Click to play again`
+          : `${this.shotCount} shot${this.shotCount > 1 ? 's' : ''} on a Par ${par}<br>Click to play again`;
+        this.hud.showMessage(label, replayMsg);
+
+        const onClick = () => {
+          window.removeEventListener('click', onClick);
           this.restartRound();
-        }
-      };
-      window.addEventListener('click', onClick);
-    }, 2000);
+        };
+        window.addEventListener('click', onClick);
+      }
+    }, 2500);
   }
 
-  private advanceToNextHole() {
+  private async advanceToNextHole() {
     this.currentHoleIndex++;
     this.holePin.clear();
-    this.setupHole(this.holes[this.currentHoleIndex]);
+    this.hud.hideMessage();
+    await this.showTransitionThenSetup();
   }
 
-  private restartRound() {
+  private async restartRound() {
     this.currentHoleIndex = 0;
     this.scorecard = [];
     this.holePin.clear();
-    this.setupHole(this.holes[0]);
+    this.hud.hideMessage();
+    await this.showTransitionThenSetup();
   }
 
   private updateZoneFriction(dt: number) {
