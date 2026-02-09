@@ -42,6 +42,7 @@ export class HUD {
   onHoleSelect?: (path: string) => void;
   onMultiplayerSetup?: (names: string[]) => void;
   onSinglePlayer?: () => void;
+  onMenuToggle?: () => void;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -145,6 +146,21 @@ export class HUD {
     this.turnBanner = document.createElement('div');
     this.turnBanner.className = 'turn-banner';
     this.container.appendChild(this.turnBanner);
+
+    // Mobile menu button
+    const menuBtn = document.createElement('button');
+    menuBtn.className = 'menu-toggle-btn';
+    menuBtn.textContent = '\u2630';
+    menuBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.onMenuToggle?.();
+    });
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.onMenuToggle?.();
+    });
+    this.container.appendChild(menuBtn);
 
     // Auto-club hint
     this.autoClubHint = document.createElement('div');

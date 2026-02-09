@@ -17,6 +17,7 @@ import { MultiplayerManager } from '../game/MultiplayerManager';
 import { BallTrail } from '../effects/BallTrail';
 import { LandingEffect } from '../effects/LandingEffect';
 import { HUD, HoleOption } from '../ui/HUD';
+import { PauseMenu } from '../ui/PauseMenu';
 import { Minimap } from '../ui/Minimap';
 import {
   GameState, CourseData, BALL_RADIUS, ZONE_PHYSICS, CLUBS, DEFAULT_CLUB_INDEX, ClubData,
@@ -80,6 +81,10 @@ export class Game {
   // Effects
   private ballTrail: BallTrail;
   private landingEffect: LandingEffect;
+
+  // Pause
+  private paused = false;
+  private pauseMenu: PauseMenu;
 
   // Putting guide
   private puttingGuide: PuttingGuide;
@@ -154,6 +159,24 @@ export class Game {
       this.currentHoleIndex = 0;
       this.requestLoadCourse(HOLES[0].path);
     };
+
+    // Pause menu
+    this.pauseMenu = new PauseMenu(hudContainer);
+    this.pauseMenu.onResume = () => this.togglePause();
+    this.pauseMenu.onRestartHole = () => {
+      this.paused = false;
+      this.pauseMenu.hide();
+      this.requestLoadCourse(HOLES[this.currentHoleIndex].path);
+    };
+    this.pauseMenu.onHoleSelect = () => {
+      this.paused = false;
+      this.pauseMenu.hide();
+      this.multiplayer.reset();
+      this.showHoleSelection();
+    };
+
+    // Mobile menu button
+    this.hud.onMenuToggle = () => this.togglePause();
 
     // Single player / back button
     this.hud.onSinglePlayer = () => {
@@ -248,11 +271,31 @@ export class Game {
     const now = performance.now();
     const dt = Math.min((now - this.lastTime) / 1000, 0.05); // cap at 50ms
     this.lastTime = now;
-    this.elapsedTime += dt;
 
+    // Check ESC for pause toggle (even while paused)
+    if (this.input.consumeKeyPress('escape')) {
+      this.togglePause();
+    }
+
+    if (this.paused) {
+      this.renderer.render();
+      return;
+    }
+
+    this.elapsedTime += dt;
     this.update(dt);
     this.renderer.render();
   };
+
+  private togglePause() {
+    if (!this.course) return;
+    this.paused = !this.paused;
+    if (this.paused) {
+      this.pauseMenu.show();
+    } else {
+      this.pauseMenu.hide();
+    }
+  }
 
   private update(dt: number) {
     if (!this.course) return;
