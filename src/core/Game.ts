@@ -3,6 +3,7 @@ import * as CANNON from 'cannon-es';
 import { Renderer } from './Renderer';
 import { PhysicsWorld } from './PhysicsWorld';
 import { InputManager } from './InputManager';
+import { InputActions } from './InputActions';
 import { CameraController } from './CameraController';
 import { GolfBall } from '../game/GolfBall';
 import { Terrain } from '../game/Terrain';
@@ -44,6 +45,7 @@ export class Game {
   private renderer: Renderer;
   private physics: PhysicsWorld;
   private input: InputManager;
+  private actions: InputActions;
   private cameraController: CameraController;
   private ball: GolfBall;
   private terrain: Terrain;
@@ -97,8 +99,6 @@ export class Game {
 
   // Multiplayer
   private multiplayer: MultiplayerManager;
-  private touchSpinDrawHeld = false;
-  private touchSpinFadeHeld = false;
   private pendingLoadPath: string | null = null;
   private retryClickHandler: (() => void) | null = null;
   private retryKeyHandler: ((e: KeyboardEvent) => void) | null = null;
@@ -107,6 +107,7 @@ export class Game {
     this.renderer = new Renderer(canvas);
     this.physics = new PhysicsWorld();
     this.input = new InputManager(canvas);
+    this.actions = new InputActions(this.input);
     this.cameraController = new CameraController(this.renderer.camera, this.input);
     this.ball = new GolfBall(this.renderer.scene, this.physics);
     this.terrain = new Terrain(this.renderer.scene, this.physics);
@@ -146,12 +147,12 @@ export class Game {
     // Club buttons (work on both mobile and desktop)
     this.hud.onClubPrev = () => this.cycleClub(-1);
     this.hud.onClubNext = () => this.cycleClub(1);
-    this.hud.onShotHoldStart = () => this.input.startTouchCharge();
-    this.hud.onShotHoldEnd = () => this.input.endTouchCharge();
-    this.hud.onSpinDrawStart = () => { this.touchSpinDrawHeld = true; };
-    this.hud.onSpinDrawEnd = () => { this.touchSpinDrawHeld = false; };
-    this.hud.onSpinFadeStart = () => { this.touchSpinFadeHeld = true; };
-    this.hud.onSpinFadeEnd = () => { this.touchSpinFadeHeld = false; };
+    this.hud.onShotHoldStart = () => this.actions.startTouchCharge();
+    this.hud.onShotHoldEnd = () => this.actions.endTouchCharge();
+    this.hud.onSpinDrawStart = () => this.actions.injectSpinLeft(true);
+    this.hud.onSpinDrawEnd = () => this.actions.injectSpinLeft(false);
+    this.hud.onSpinFadeStart = () => this.actions.injectSpinRight(true);
+    this.hud.onSpinFadeEnd = () => this.actions.injectSpinRight(false);
 
     // Hole selection callback
     this.hud.onHoleSelect = (path: string) => {
@@ -232,8 +233,8 @@ export class Game {
 
     // Reset spin
     this.spin.reset();
-    this.touchSpinDrawHeld = false;
-    this.touchSpinFadeHeld = false;
+    this.actions.injectSpinLeft(false);
+    this.actions.injectSpinRight(false);
     this.hud.setSpin(this.spin.getLabel());
 
     // Setup minimap
@@ -287,7 +288,7 @@ export class Game {
     this.lastTime = now;
 
     // Check ESC for pause toggle (even while paused)
-    if (this.input.consumeKeyPress('escape')) {
+    if (this.actions.consumeAction('MenuToggle')) {
       this.togglePause();
     }
 
@@ -382,14 +383,14 @@ export class Game {
     this.cameraController.setMode('aim');
 
     // Club selection via keyboard
-    if (this.input.consumeKeyPress('q')) this.cycleClub(-1);
-    if (this.input.consumeKeyPress('e')) this.cycleClub(1);
+    if (this.actions.consumeAction('ClubPrev')) this.cycleClub(-1);
+    if (this.actions.consumeAction('ClubNext')) this.cycleClub(1);
 
     // Spin adjustment via Z/C keys (held)
     this.spin.adjustSpin(
       dt,
-      this.input.isKeyDown('z') || this.touchSpinDrawHeld,
-      this.input.isKeyDown('c') || this.touchSpinFadeHeld
+      this.actions.isActionActive('SpinLeft'),
+      this.actions.isActionActive('SpinRight')
     );
     this.hud.setSpin(this.spin.getLabel());
 
@@ -412,8 +413,8 @@ export class Game {
       this.puttingGuide.update(ballPos, orbitAngle, null);
     }
 
-    // Spacebar to start charging
-    if (this.input.consumeSpacePress()) {
+    // Spacebar / touch hold to start charging
+    if (this.actions.consumeAction('ChargeStart')) {
       this.state = 'power';
       this.shotController.startCharge();
       this.hud.showPowerMeter(true);
@@ -428,8 +429,8 @@ export class Game {
     // Continue spin adjustment during power
     this.spin.adjustSpin(
       dt,
-      this.input.isKeyDown('z') || this.touchSpinDrawHeld,
-      this.input.isKeyDown('c') || this.touchSpinFadeHeld
+      this.actions.isActionActive('SpinLeft'),
+      this.actions.isActionActive('SpinRight')
     );
     this.hud.setSpin(this.spin.getLabel());
 
@@ -452,8 +453,8 @@ export class Game {
       this.puttingGuide.update(ballPos, orbitAngle, this.shotController.power);
     }
 
-    // Release spacebar to shoot
-    if (this.input.consumeSpaceRelease()) {
+    // Release spacebar / touch to shoot
+    if (this.actions.consumeAction('ChargeEnd')) {
       const shot = this.shotController.releaseShot();
       this.ball.applyShot(shot.direction, shot.power);
 
