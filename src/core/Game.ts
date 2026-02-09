@@ -13,6 +13,8 @@ import { CourseLoader } from '../game/CourseLoader';
 import { WindSystem } from '../game/WindSystem';
 import { SpinSystem } from '../game/SpinSystem';
 import { PuttingGuide } from '../game/PuttingGuide';
+import { ShotFeedback } from '../game/ShotFeedback';
+import { ScorePanel } from '../ui/ScorePanel';
 import { MultiplayerManager } from '../game/MultiplayerManager';
 import { BallTrail } from '../effects/BallTrail';
 import { LandingEffect } from '../effects/LandingEffect';
@@ -86,6 +88,10 @@ export class Game {
   private paused = false;
   private pauseMenu: PauseMenu;
 
+  // Shot feedback & score panel
+  private shotFeedback: ShotFeedback;
+  private scorePanel: ScorePanel;
+
   // Putting guide
   private puttingGuide: PuttingGuide;
 
@@ -126,6 +132,10 @@ export class Game {
     // Effects
     this.ballTrail = new BallTrail(this.renderer.scene);
     this.landingEffect = new LandingEffect(this.renderer.scene);
+
+    // Shot feedback & score panel
+    this.shotFeedback = new ShotFeedback();
+    this.scorePanel = new ScorePanel(hudContainer);
 
     // Putting guide
     this.puttingGuide = new PuttingGuide(this.renderer.scene);
@@ -248,6 +258,10 @@ export class Game {
 
     this.state = 'aiming';
     this.hud.hideMessage();
+
+    // Update score panel for new hole
+    this.scorePanel.update(this.shotCount, this.course.par, this.scorecard);
+    this.scorePanel.show();
   }
 
   showHoleSelection() {
@@ -443,6 +457,10 @@ export class Game {
       const shot = this.shotController.releaseShot();
       this.ball.applyShot(shot.direction, shot.power);
 
+      // Shot feedback
+      this.shotFeedback.onShotFired();
+      this.cameraController.applyKick(0.3);
+
       this.shotCount++;
       if (this.multiplayer.enabled) {
         this.multiplayer.incrementShot();
@@ -450,6 +468,10 @@ export class Game {
       this.hud.setShotInfo(this.shotCount, this.course!.par);
       this.hud.showPowerMeter(false);
       this.trajectoryPreview.setVisible(false);
+
+      // Update score panel
+      this.scorePanel.update(this.shotCount, this.course!.par, this.scorecard);
+      this.scorePanel.show();
 
       // Reset spin after shot
       this.spin.reset();
@@ -482,6 +504,7 @@ export class Game {
     if (this.ball.consumeLandingEvent()) {
       const zone = this.terrain.getZoneAtPosition(ballPos.x, ballPos.z);
       this.landingEffect.trigger(ballPos.x, ballPos.y, ballPos.z, zone);
+      this.shotFeedback.playLandingSound(zone);
     }
 
     // Check water hazard

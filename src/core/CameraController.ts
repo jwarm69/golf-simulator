@@ -20,6 +20,10 @@ export class CameraController {
   private followOffset = new THREE.Vector3(0, 4, 8);
   private ballVelocity = new THREE.Vector3();
 
+  // Camera kick
+  private kickOffset = new THREE.Vector3();
+  private kickDecay = 0.9;
+
   // Lerp smoothing
   private lerpFactor = 0.08;
 
@@ -53,6 +57,14 @@ export class CameraController {
     return this.orbitAngle;
   }
 
+  applyKick(intensity: number) {
+    this.kickOffset.set(
+      (Math.random() - 0.5) * intensity * 0.5,
+      intensity * 0.3,
+      (Math.random() - 0.5) * intensity * 0.5
+    );
+  }
+
   update() {
     if (this.mode === 'aim') {
       this.updateAim();
@@ -60,6 +72,12 @@ export class CameraController {
       this.updateFollow();
     } else if (this.mode === 'overview') {
       this.updateOverview();
+    }
+
+    // Apply and decay kick offset
+    if (this.kickOffset.lengthSq() > 0.0001) {
+      this.camera.position.add(this.kickOffset);
+      this.kickOffset.multiplyScalar(this.kickDecay);
     }
   }
 
