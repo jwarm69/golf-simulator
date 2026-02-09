@@ -1,3 +1,5 @@
+import type { RangeStats } from '../game/RangeManager';
+
 export interface HoleOption {
   path: string;
   name: string;
@@ -30,6 +32,7 @@ export class HUD {
   private autoClubHint!: HTMLElement;
   private multiplayerSetupOverlay!: HTMLElement;
   private roundSummaryOverlay!: HTMLElement;
+  private rangeHUD!: HTMLElement;
 
   onClubPrev?: () => void;
   onClubNext?: () => void;
@@ -43,6 +46,7 @@ export class HUD {
   onMultiplayerSetup?: (names: string[]) => void;
   onSinglePlayer?: () => void;
   onMenuToggle?: () => void;
+  onRangeSelect?: () => void;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -245,6 +249,12 @@ export class HUD {
     this.roundSummaryOverlay = document.createElement('div');
     this.roundSummaryOverlay.className = 'hole-select-overlay';
     this.container.appendChild(this.roundSummaryOverlay);
+
+    // Range HUD
+    this.rangeHUD = document.createElement('div');
+    this.rangeHUD.className = 'range-hud';
+    this.rangeHUD.innerHTML = '<div class="range-stat">Last: --m</div><div class="range-stat">Targets: 0</div>';
+    this.container.appendChild(this.rangeHUD);
   }
 
   setHoleName(name: string) {
@@ -473,6 +483,18 @@ export class HUD {
     }
 
     this.holeSelectOverlay.appendChild(grid);
+
+    // Driving Range button
+    const rangeBtn = document.createElement('button');
+    rangeBtn.className = 'hole-card';
+    rangeBtn.style.marginTop = '16px';
+    rangeBtn.innerHTML = '<div class="hole-card-name">Driving Range</div><div class="hole-card-par">Practice Mode</div>';
+    rangeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.hideHoleSelect();
+      this.onRangeSelect?.();
+    });
+    this.holeSelectOverlay.appendChild(rangeBtn);
 
     // Multiplayer button
     const mpBtn = document.createElement('button');
@@ -704,5 +726,21 @@ export class HUD {
 
   hideRoundSummary() {
     this.roundSummaryOverlay.classList.remove('visible');
+  }
+
+  showRangeHUD(visible: boolean) {
+    this.rangeHUD.classList.toggle('visible', visible);
+  }
+
+  updateRangeStats(stats: RangeStats) {
+    const distText = stats.lastDistance > 0 ? `${stats.lastDistance}m` : '--m';
+    const accuracyText = stats.lastAccuracy !== null ? `${stats.lastAccuracy}%` : '';
+    const targetText = stats.targetHit !== null ? `Hit ${stats.targetHit}m target! ${accuracyText}` : '';
+
+    this.rangeHUD.innerHTML = [
+      `<div class="range-stat">Last: ${distText}</div>`,
+      targetText ? `<div class="range-stat range-hit">${targetText}</div>` : '',
+      `<div class="range-stat">Shots: ${stats.totalShots} | Targets Hit: ${stats.targetsHit}</div>`,
+    ].join('');
   }
 }

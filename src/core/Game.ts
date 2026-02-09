@@ -15,6 +15,9 @@ import { WindSystem } from '../game/WindSystem';
 import { SpinSystem } from '../game/SpinSystem';
 import { PuttingGuide } from '../game/PuttingGuide';
 import { ShotFeedback } from '../game/ShotFeedback';
+import { DrivingRange } from '../game/DrivingRange';
+import { RangeManager, RangeStats } from '../game/RangeManager';
+import { GameMode } from '../game/GameMode';
 import { ScorePanel } from '../ui/ScorePanel';
 import { MultiplayerManager } from '../game/MultiplayerManager';
 import { BallTrail } from '../effects/BallTrail';
@@ -97,6 +100,11 @@ export class Game {
   // Putting guide
   private puttingGuide: PuttingGuide;
 
+  // Game mode (course vs range)
+  private gameMode: GameMode = 'course';
+  private drivingRange: DrivingRange;
+  private rangeManager: RangeManager;
+
   // Multiplayer
   private multiplayer: MultiplayerManager;
   private pendingLoadPath: string | null = null;
@@ -141,6 +149,17 @@ export class Game {
     // Putting guide
     this.puttingGuide = new PuttingGuide(this.renderer.scene);
 
+    // Driving range
+    this.drivingRange = new DrivingRange(this.renderer.scene, this.physics);
+    this.rangeManager = new RangeManager(this.drivingRange, this.ball);
+    this.rangeManager.onStatsUpdate = (stats) => this.hud.updateRangeStats(stats);
+    this.rangeManager.onBallReset = () => {
+      this.cameraController.setMode('aim');
+      this.state = 'aiming';
+      this.clubIndex = DEFAULT_CLUB_INDEX;
+      this.cycleClub(0);
+    };
+
     // Multiplayer
     this.multiplayer = new MultiplayerManager();
 
@@ -183,8 +202,15 @@ export class Game {
       this.paused = false;
       this.pauseMenu.hide();
       this.multiplayer.reset();
-      this.showHoleSelection();
+      if (this.gameMode === 'range') {
+        this.switchToCourse();
+      } else {
+        this.showHoleSelection();
+      }
     };
+
+    // Range select callback
+    this.hud.onRangeSelect = () => this.switchToRange();
 
     // Mobile menu button
     this.hud.onMenuToggle = () => this.togglePause();
@@ -312,6 +338,62 @@ export class Game {
     }
   }
 
+  private switchToRange() {
+    this.gameMode = 'range';
+    this.course = null;
+
+    // Clear course terrain and build range
+    this.terrain.clear();
+    this.drivingRange.build();
+
+    // Set up ball at range tee
+    const tee = this.drivingRange.teePosition;
+    this.ball.setPosition(tee.x, BALL_RADIUS + 0.01, tee.z);
+    this.ball.setColor(0xffffff);
+
+    // Camera
+    this.cameraController.setTarget(this.ball.getPosition());
+    this.cameraController.setMode('aim');
+
+    // HUD
+    this.hud.setHoleName('Driving Range');
+    this.shotCount = 0;
+    this.hud.setShotInfo(this.shotCount, 0);
+    this.hud.hideMessage();
+    this.scorePanel.hide();
+    this.hud.showRangeHUD(true);
+
+    // Wind
+    this.wind.generateWind();
+    this.hud.setWind(this.wind.getDirectionDegrees(), this.wind.getSpeedMPH());
+
+    // Club
+    this.clubIndex = DEFAULT_CLUB_INDEX;
+    this.cycleClub(0);
+
+    // Reset range stats
+    this.rangeManager.reset();
+
+    // Create a minimal "course" object so update() doesn't bail
+    this.course = {
+      name: 'Driving Range',
+      par: 0,
+      tee: { x: tee.x, z: tee.z },
+      hole: { x: 0, z: -150 },
+      zones: [],
+      obstacles: [],
+    };
+
+    this.state = 'aiming';
+  }
+
+  private switchToCourse() {
+    this.gameMode = 'course';
+    this.drivingRange.clear();
+    this.hud.showRangeHUD(false);
+    this.showHoleSelection();
+  }
+
   private update(dt: number) {
     if (!this.course) return;
 
@@ -362,6 +444,11 @@ export class Game {
     // Update effects
     this.ballTrail.update(dt, ballPos, this.ball.getSpeed(), this.state === 'rolling');
     this.landingEffect.update(dt);
+
+    // Update range manager (handles auto-reset timer)
+    if (this.gameMode === 'range') {
+      this.rangeManager.update(dt);
+    }
   }
 
   private cycleClub(delta: number) {
@@ -462,6 +549,11 @@ export class Game {
       this.shotFeedback.onShotFired();
       this.cameraController.applyKick(0.3);
 
+      // Range mode tracking
+      if (this.gameMode === 'range') {
+        this.rangeManager.onShotFired();
+      }
+
       this.shotCount++;
       if (this.multiplayer.enabled) {
         this.multiplayer.incrementShot();
@@ -524,8 +616,8 @@ export class Game {
       return;
     }
 
-    // Check if ball is in hole
-    if (this.holePin.checkBallInHole(ballPos.x, ballPos.z, this.ball.getSpeed())) {
+    // Check if ball is in hole (course mode only)
+    if (this.gameMode === 'course' && this.holePin.checkBallInHole(ballPos.x, ballPos.z, this.ball.getSpeed())) {
       this.state = 'holed';
       this.onHoled();
       return;
@@ -533,6 +625,9 @@ export class Game {
 
     // Check if ball stopped
     if (this.ball.isSleeping) {
+      if (this.gameMode === 'range') {
+        this.rangeManager.onBallStopped();
+      }
       this.state = 'stopped';
     }
   }

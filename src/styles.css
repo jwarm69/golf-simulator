@@ -669,6 +669,37 @@ body {
   padding-left: 16px;
 }
 
+/* Range HUD */
+.range-hud {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  color: #fff;
+  font-size: 13px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 8px 14px;
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.range-hud.visible {
+  opacity: 1;
+}
+
+.range-stat {
+  white-space: nowrap;
+}
+
+.range-hit {
+  color: #6ec85e;
+  font-weight: bold;
+}
+
 /* Crosshair */
 .crosshair {
   position: absolute;
