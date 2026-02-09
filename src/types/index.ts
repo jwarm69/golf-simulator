@@ -1,6 +1,6 @@
 export type ZoneType = 'tee' | 'fairway' | 'green' | 'rough' | 'sand' | 'water';
 
-export type GameState = 'aiming' | 'power' | 'rolling' | 'stopped' | 'holed';
+export type GameState = 'aiming' | 'power' | 'rolling' | 'stopped' | 'holed' | 'putting_aim' | 'putting_power';
 
 export interface Vec2 {
   x: number;

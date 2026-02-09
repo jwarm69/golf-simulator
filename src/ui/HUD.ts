@@ -13,6 +13,7 @@ export class HUD {
   private distanceEl!: HTMLElement;
   private clubEl!: HTMLElement;
   private scorecardEl!: HTMLElement;
+  private puttingBadge!: HTMLElement;
 
   onClubPrev?: () => void;
   onClubNext?: () => void;
@@ -93,6 +94,12 @@ export class HUD {
     clubRow.appendChild(nextBtn);
     this.container.appendChild(clubRow);
 
+    // Putting mode badge
+    this.puttingBadge = document.createElement('div');
+    this.puttingBadge.className = 'putting-badge';
+    this.puttingBadge.textContent = 'ON THE GREEN';
+    this.container.appendChild(this.puttingBadge);
+
     // Aim hint
     this.aimHint = document.createElement('div');
     this.aimHint.className = 'aim-hint';
@@ -147,6 +154,15 @@ export class HUD {
 
   showAimHint(visible: boolean) {
     this.aimHint.style.opacity = visible ? '1' : '0';
+  }
+
+  setPuttingMode(active: boolean) {
+    this.puttingBadge.classList.toggle('visible', active);
+    if (active) {
+      this.aimHint.textContent = 'A/D to aim  |  SPACE to putt';
+    } else {
+      this.aimHint.textContent = 'A/D to aim  |  Q/E change club  |  SPACE to shoot  |  Scroll to adjust view';
+    }
   }
 
   setClub(name: string, maxDist: number) {

@@ -7,9 +7,12 @@ import { Terrain } from '../game/Terrain';
 import { HolePin } from '../game/HolePin';
 import { ShotController } from '../game/ShotController';
 import { TrajectoryPreview } from '../game/TrajectoryPreview';
+import { PuttingGuide } from '../game/PuttingGuide';
 import { CourseLoader } from '../game/CourseLoader';
 import { HUD } from '../ui/HUD';
 import { GameState, CourseData, BALL_RADIUS, ZONE_PHYSICS, CLUBS, DEFAULT_CLUB_INDEX, ClubData } from '../types';
+
+const PUTTER_INDEX = CLUBS.findIndex(c => c.name === 'Putter');
 
 export class Game {
   private renderer: Renderer;
@@ -38,6 +41,10 @@ export class Game {
   // Trajectory preview
   private trajectoryPreview: TrajectoryPreview;
 
+  // Putting
+  private puttingGuide: PuttingGuide;
+  private prePuttClubIndex = DEFAULT_CLUB_INDEX;
+
   constructor(canvas: HTMLCanvasElement, hudContainer: HTMLElement) {
     this.renderer = new Renderer(canvas);
     this.physics = new PhysicsWorld();
@@ -56,6 +63,9 @@ export class Game {
 
     // Trajectory preview arc + landing ring
     this.trajectoryPreview = new TrajectoryPreview(this.renderer.scene);
+
+    // Putting guide (ground aim line)
+    this.puttingGuide = new PuttingGuide(this.renderer.scene);
 
     // Mobile club buttons
     this.hud.onClubPrev = () => this.cycleClub(-1);
@@ -119,6 +129,12 @@ export class Game {
         break;
       case 'holed':
         this.updateHoled(dt);
+        break;
+      case 'putting_aim':
+        this.updatePuttingAim(dt);
+        break;
+      case 'putting_power':
+        this.updatePuttingPower(dt);
         break;
     }
 
@@ -237,12 +253,92 @@ export class Game {
   }
 
   private updateStopped(_dt: number) {
-    this.cameraController.setMode('aim');
-    this.state = 'aiming';
+    const ballPos = this.ball.getPosition();
+    const zone = this.terrain.getZoneAtPosition(ballPos.x, ballPos.z);
+
+    if (zone === 'green') {
+      // Enter putting mode
+      this.enterPuttingMode();
+    } else {
+      this.cameraController.setMode('aim');
+      this.state = 'aiming';
+    }
+  }
+
+  private enterPuttingMode() {
+    this.prePuttClubIndex = this.clubIndex;
+    this.clubIndex = PUTTER_INDEX;
+    this.currentClub = CLUBS[PUTTER_INDEX];
+    this.shotController.setClub(this.currentClub);
+    this.hud.setClub('Putter', 10);
+    this.hud.setPuttingMode(true);
+    this.cameraController.setMode('putt');
+    this.state = 'putting_aim';
+  }
+
+  private exitPuttingMode() {
+    this.puttingGuide.setVisible(false);
+    this.hud.setPuttingMode(false);
+    // Restore previous club
+    this.clubIndex = this.prePuttClubIndex;
+    this.currentClub = CLUBS[this.clubIndex];
+    this.shotController.setClub(this.currentClub);
+    this.cycleClub(0); // refresh display
+  }
+
+  private updatePuttingAim(_dt: number) {
+    this.hud.showAimHint(true);
+    this.hud.showPowerMeter(false);
+    this.hud.hideMessage();
+    this.trajectoryPreview.setVisible(false);
+
+    this.cameraController.setMode('putt');
+
+    // Show putting guide line
+    const ballPos = this.ball.getPosition();
+    const orbitAngle = this.cameraController.getOrbitAngle();
+    this.puttingGuide.update(ballPos, orbitAngle, null);
+    this.puttingGuide.setVisible(true);
+
+    // Spacebar to start charging putt
+    if (this.input.consumeSpacePress()) {
+      this.state = 'putting_power';
+      this.shotController.startCharge();
+      this.hud.showPowerMeter(true);
+      this.hud.showAimHint(false);
+    }
+  }
+
+  private updatePuttingPower(dt: number) {
+    this.shotController.updateCharge(dt);
+    this.hud.setPower(this.shotController.power);
+
+    // Update putting guide with current power
+    const ballPos = this.ball.getPosition();
+    const orbitAngle = this.cameraController.getOrbitAngle();
+    this.puttingGuide.update(ballPos, orbitAngle, this.shotController.power);
+    this.puttingGuide.setVisible(true);
+    this.trajectoryPreview.setVisible(false);
+
+    // Release spacebar to putt
+    if (this.input.consumeSpaceRelease()) {
+      const shot = this.shotController.releaseShot();
+      this.ball.applyShot(shot.direction, shot.power);
+
+      this.shotCount++;
+      this.hud.setShotInfo(this.shotCount, this.course!.par);
+      this.hud.showPowerMeter(false);
+      this.puttingGuide.setVisible(false);
+
+      this.state = 'rolling';
+      this.cameraController.setMode('follow');
+      this.exitPuttingMode();
+    }
   }
 
   private updateHoled(_dt: number) {
     this.cameraController.setMode('overview');
+    this.puttingGuide.setVisible(false);
   }
 
   private onHoled() {

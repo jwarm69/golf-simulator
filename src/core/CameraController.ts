@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { InputManager } from './InputManager';
 
-export type CameraMode = 'aim' | 'follow' | 'overview';
+export type CameraMode = 'aim' | 'follow' | 'overview' | 'putt';
 
 export class CameraController {
   private camera: THREE.PerspectiveCamera;
@@ -32,6 +32,8 @@ export class CameraController {
     this.mode = mode;
     if (mode === 'overview') {
       this.lerpFactor = 0.03;
+    } else if (mode === 'putt') {
+      this.lerpFactor = 0.06;
     } else {
       this.lerpFactor = 0.08;
     }
@@ -60,6 +62,8 @@ export class CameraController {
       this.updateFollow();
     } else if (this.mode === 'overview') {
       this.updateOverview();
+    } else if (this.mode === 'putt') {
+      this.updatePutt();
     }
   }
 
@@ -137,6 +141,34 @@ export class CameraController {
       this.target.x,
       this.target.y + 20,
       this.target.z + 15
+    );
+
+    this.camera.position.lerp(desiredPos, this.lerpFactor);
+    this.camera.lookAt(this.target);
+  }
+
+  private updatePutt() {
+    // A/D keys or right-drag or touch-drag to rotate (same as aim)
+    if (this.input.keys.has('a')) this.orbitAngle -= 0.025;
+    if (this.input.keys.has('d')) this.orbitAngle += 0.025;
+
+    const drag = this.input.consumeRightDragDelta();
+    this.orbitAngle += drag.x * 0.005;
+
+    const touchDrag = this.input.consumeTouchDragDeltaX();
+    this.orbitAngle += touchDrag * 0.005;
+
+    // Low, close camera for putting - 3m away, low elevation
+    const puttDistance = 3.5;
+    const puttElevation = 18; // degrees - low angle
+    const elevRad = (puttElevation * Math.PI) / 180;
+    const horizontalDist = puttDistance * Math.cos(elevRad);
+    const verticalDist = puttDistance * Math.sin(elevRad);
+
+    const desiredPos = new THREE.Vector3(
+      this.target.x + Math.sin(this.orbitAngle) * horizontalDist,
+      this.target.y + verticalDist,
+      this.target.z + Math.cos(this.orbitAngle) * horizontalDist
     );
 
     this.camera.position.lerp(desiredPos, this.lerpFactor);

@@ -201,6 +201,28 @@ body {
   opacity: 0.8;
 }
 
+.putting-badge {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: rgba(40, 120, 60, 0.7);
+  padding: 6px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(110, 200, 94, 0.5);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.putting-badge.visible {
+  opacity: 1;
+}
+
 .crosshair {
   position: absolute;
   top: 50%;
