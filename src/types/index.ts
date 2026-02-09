@@ -120,6 +120,16 @@ export const CLUBS: ClubData[] = [
 
 export const DEFAULT_CLUB_INDEX = 3; // 7 Iron
 
+export const AUTO_PUTTER_DISTANCE = 30;
+
+export interface LeaderboardEntry {
+  playerName: string;
+  totalStrokes: number;
+  totalPar: number;
+  date: string;
+  holesPlayed: number;
+}
+
 export const BALL_RADIUS = 0.15;
 export const BALL_MASS = 0.046;
 export const SLEEP_SPEED_THRESHOLD = 0.05;
