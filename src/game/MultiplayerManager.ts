@@ -16,9 +16,15 @@ export class MultiplayerManager {
   currentPlayerIndex = 0;
   enabled = false;
 
+  private sanitizeName(name: string, fallback: string): string {
+    const trimmed = name.trim().replace(/\s+/g, ' ').slice(0, 24);
+    const safe = trimmed.replace(/[<>"'&]/g, '');
+    return safe.length > 0 ? safe : fallback;
+  }
+
   setup(names: string[]) {
     this.players = names.map((name, i) => ({
-      name,
+      name: this.sanitizeName(name, `Player ${i + 1}`),
       color: PLAYER_COLORS[i % PLAYER_COLORS.length],
       scores: [],
       ballPosition: new THREE.Vector3(),

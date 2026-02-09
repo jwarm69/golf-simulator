@@ -29,6 +29,7 @@ export class InputManager {
   private touchStartY = 0;
   private isTouchDragging = false;
   touchDragDeltaX = 0;
+  touchDragDeltaY = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -156,10 +157,24 @@ export class InputManager {
     return d;
   }
 
-  simulateSpaceTap() {
-    this._spacePressed = true;
-    this._spaceReleased = true;
-    this.spaceDown = false;
+  consumeTouchDragDeltaY(): number {
+    const d = this.touchDragDeltaY;
+    this.touchDragDeltaY = 0;
+    return d;
+  }
+
+  startTouchCharge() {
+    if (!this.spaceDown) {
+      this.spaceDown = true;
+      this._spacePressed = true;
+    }
+  }
+
+  endTouchCharge() {
+    if (this.spaceDown) {
+      this.spaceDown = false;
+      this._spaceReleased = true;
+    }
   }
 
   private onTouchStart(e: TouchEvent) {
@@ -174,18 +189,16 @@ export class InputManager {
     e.preventDefault();
     const touch = e.touches[0];
     const dx = touch.clientX - this.touchStartX;
+    const dy = touch.clientY - this.touchStartY;
     this.touchDragDeltaX += dx;
+    this.touchDragDeltaY += dy;
     this.touchStartX = touch.clientX;
     this.touchStartY = touch.clientY;
-    if (Math.abs(dx) > 3) this.isTouchDragging = true;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) this.isTouchDragging = true;
   }
 
   private onTouchEnd(e: TouchEvent) {
     e.preventDefault();
-    // If it was a tap (not a drag), simulate space press+release
-    if (!this.isTouchDragging) {
-      this.simulateSpaceTap();
-    }
     this.isTouchDragging = false;
   }
 }

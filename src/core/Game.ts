@@ -82,6 +82,11 @@ export class Game {
 
   // Multiplayer
   private multiplayer: MultiplayerManager;
+  private touchSpinDrawHeld = false;
+  private touchSpinFadeHeld = false;
+  private pendingLoadPath: string | null = null;
+  private retryClickHandler: (() => void) | null = null;
+  private retryKeyHandler: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement, hudContainer: HTMLElement) {
     this.renderer = new Renderer(canvas);
@@ -119,6 +124,12 @@ export class Game {
     // Club buttons (work on both mobile and desktop)
     this.hud.onClubPrev = () => this.cycleClub(-1);
     this.hud.onClubNext = () => this.cycleClub(1);
+    this.hud.onShotHoldStart = () => this.input.startTouchCharge();
+    this.hud.onShotHoldEnd = () => this.input.endTouchCharge();
+    this.hud.onSpinDrawStart = () => { this.touchSpinDrawHeld = true; };
+    this.hud.onSpinDrawEnd = () => { this.touchSpinDrawHeld = false; };
+    this.hud.onSpinFadeStart = () => { this.touchSpinFadeHeld = true; };
+    this.hud.onSpinFadeEnd = () => { this.touchSpinFadeHeld = false; };
 
     // Hole selection callback
     this.hud.onHoleSelect = (path: string) => {
@@ -126,7 +137,7 @@ export class Game {
       if (idx >= 0) this.currentHoleIndex = idx;
       this.multiplayer.reset();
       this.scorecard = [];
-      this.loadCourse(path);
+      this.requestLoadCourse(path);
     };
 
     // Multiplayer setup callback
@@ -134,7 +145,7 @@ export class Game {
       this.multiplayer.setup(names);
       this.scorecard = [];
       this.currentHoleIndex = 0;
-      this.loadCourse(HOLES[0].path);
+      this.requestLoadCourse(HOLES[0].path);
     };
 
     // Single player / back button
@@ -146,6 +157,8 @@ export class Game {
 
   async loadCourse(path: string) {
     this.course = await this.courseLoader.load(path);
+    this.pendingLoadPath = null;
+    this.clearLoadRetryHandlers();
 
     // Apply theme colors
     const theme = (this.course.theme ?? 'meadow') as ThemeName;
@@ -179,6 +192,8 @@ export class Game {
 
     // Reset spin
     this.spin.reset();
+    this.touchSpinDrawHeld = false;
+    this.touchSpinFadeHeld = false;
     this.hud.setSpin(this.spin.getLabel());
 
     // Setup minimap
@@ -307,7 +322,11 @@ export class Game {
     if (this.input.consumeKeyPress('e')) this.cycleClub(1);
 
     // Spin adjustment via Z/C keys (held)
-    this.spin.adjustSpin(dt, this.input.isKeyDown('z'), this.input.isKeyDown('c'));
+    this.spin.adjustSpin(
+      dt,
+      this.input.isKeyDown('z') || this.touchSpinDrawHeld,
+      this.input.isKeyDown('c') || this.touchSpinFadeHeld
+    );
     this.hud.setSpin(this.spin.getLabel());
 
     // Show trajectory preview at default power with wind + spin
@@ -335,7 +354,11 @@ export class Game {
     this.hud.setPower(this.shotController.power);
 
     // Continue spin adjustment during power
-    this.spin.adjustSpin(dt, this.input.isKeyDown('z'), this.input.isKeyDown('c'));
+    this.spin.adjustSpin(
+      dt,
+      this.input.isKeyDown('z') || this.touchSpinDrawHeld,
+      this.input.isKeyDown('c') || this.touchSpinFadeHeld
+    );
     this.hud.setSpin(this.spin.getLabel());
 
     // Update trajectory preview with current power + wind + spin
@@ -474,7 +497,9 @@ export class Game {
 
       if (!this.multiplayer.allHoledOut()) {
         // Not everyone has holed out yet, switch to next player
-        this.hud.showMessage(label, `${this.multiplayer.getCurrentPlayer()?.name}: ${this.shotCount} shots`);
+        const currentPlayer = this.multiplayer.getCurrentPlayer();
+        const playerLabel = currentPlayer ? `${currentPlayer.name}: ${this.shotCount} shots` : `${this.shotCount} shots`;
+        this.hud.showMessageSafe(label, playerLabel);
         setTimeout(() => {
           this.hud.hideMessage();
           const nextPlayer = this.multiplayer.nextPlayer();
@@ -573,7 +598,7 @@ export class Game {
         window.removeEventListener('click', onClick);
         window.removeEventListener('keydown', onKey);
         this.currentHoleIndex = nextHoleIndex;
-        this.loadCourse(HOLES[nextHoleIndex].path);
+        this.requestLoadCourse(HOLES[nextHoleIndex].path);
       };
 
       const onKey = (e: KeyboardEvent) => {
@@ -596,6 +621,60 @@ export class Game {
     const mat = this.physics.getMaterialForZone(zone);
     this.physics.groundBody.material = mat;
     this.ball.applyRollingResistance(ZONE_PHYSICS[zone].rollingResistance, dt);
+  }
+
+  private requestLoadCourse(path: string) {
+    void this.loadCourse(path).catch((error) => {
+      this.pendingLoadPath = path;
+      console.error(`Failed to load course "${path}"`, error);
+      this.state = 'stopped';
+      this.hud.showMessage(
+        'Course Load Failed',
+        'Tap/click to retry  |  Press H to choose a different hole'
+      );
+      this.attachLoadRetryHandlers();
+    });
+  }
+
+  private attachLoadRetryHandlers() {
+    this.clearLoadRetryHandlers();
+    this.retryClickHandler = () => {
+      if (!this.pendingLoadPath) return;
+      const retryPath = this.pendingLoadPath;
+      this.hud.hideMessage();
+      this.clearLoadRetryHandlers();
+      this.requestLoadCourse(retryPath);
+    };
+    this.retryKeyHandler = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if (key === 'h') {
+        this.hud.hideMessage();
+        this.clearLoadRetryHandlers();
+        this.showHoleSelection();
+        return;
+      }
+      if (key === 'r' || key === 'enter' || key === ' ') {
+        e.preventDefault();
+        if (!this.pendingLoadPath) return;
+        const retryPath = this.pendingLoadPath;
+        this.hud.hideMessage();
+        this.clearLoadRetryHandlers();
+        this.requestLoadCourse(retryPath);
+      }
+    };
+    window.addEventListener('click', this.retryClickHandler);
+    window.addEventListener('keydown', this.retryKeyHandler);
+  }
+
+  private clearLoadRetryHandlers() {
+    if (this.retryClickHandler) {
+      window.removeEventListener('click', this.retryClickHandler);
+      this.retryClickHandler = null;
+    }
+    if (this.retryKeyHandler) {
+      window.removeEventListener('keydown', this.retryKeyHandler);
+      this.retryKeyHandler = null;
+    }
   }
 
   private loadBestScores(): Record<string, number> {

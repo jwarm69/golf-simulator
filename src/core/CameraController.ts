@@ -71,8 +71,10 @@ export class CameraController {
     const drag = this.input.consumeRightDragDelta();
     this.orbitAngle += drag.x * 0.005;
 
-    const touchDrag = this.input.consumeTouchDragDeltaX();
-    this.orbitAngle += touchDrag * 0.005;
+    const touchDragX = this.input.consumeTouchDragDeltaX();
+    const touchDragY = this.input.consumeTouchDragDeltaY();
+    this.orbitAngle += touchDragX * 0.005;
+    this.orbitElevation = Math.max(10, Math.min(70, this.orbitElevation - touchDragY * 0.15));
 
     // Scroll to adjust elevation
     const scroll = this.input.consumeScrollDelta();
@@ -98,6 +100,13 @@ export class CameraController {
     if (leftDrag.lengthSq() > 0) {
       this.orbitAngle += leftDrag.x * 0.005;
       this.orbitElevation = Math.max(10, Math.min(70, this.orbitElevation - leftDrag.y * 0.2));
+    }
+
+    const touchDragX = this.input.consumeTouchDragDeltaX();
+    const touchDragY = this.input.consumeTouchDragDeltaY();
+    if (Math.abs(touchDragX) > 0 || Math.abs(touchDragY) > 0) {
+      this.orbitAngle += touchDragX * 0.005;
+      this.orbitElevation = Math.max(10, Math.min(70, this.orbitElevation - touchDragY * 0.2));
     }
 
     // Scroll to adjust distance/elevation

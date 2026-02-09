@@ -32,6 +32,12 @@ export class HUD {
 
   onClubPrev?: () => void;
   onClubNext?: () => void;
+  onShotHoldStart?: () => void;
+  onShotHoldEnd?: () => void;
+  onSpinDrawStart?: () => void;
+  onSpinDrawEnd?: () => void;
+  onSpinFadeStart?: () => void;
+  onSpinFadeEnd?: () => void;
   onHoleSelect?: (path: string) => void;
   onMultiplayerSetup?: (names: string[]) => void;
   onSinglePlayer?: () => void;
@@ -39,6 +45,39 @@ export class HUD {
   constructor(container: HTMLElement) {
     this.container = container;
     this.build();
+  }
+
+  private bindHoldEvents(
+    button: HTMLElement,
+    onStart?: () => void,
+    onEnd?: () => void
+  ) {
+    button.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onStart?.();
+    });
+    button.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onEnd?.();
+    });
+    button.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onEnd?.();
+    });
+    button.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onStart?.();
+    });
+    button.addEventListener('mouseup', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onEnd?.();
+    });
+    button.addEventListener('mouseleave', () => onEnd?.());
   }
 
   private build() {
@@ -93,7 +132,7 @@ export class HUD {
 
     this.powerLabel = document.createElement('div');
     this.powerLabel.className = 'power-meter-label';
-    this.powerLabel.textContent = 'SPACE / Tap to shoot';
+    this.powerLabel.textContent = 'SPACE / Hold to shoot';
     this.container.appendChild(this.powerLabel);
 
     // Center message
@@ -136,10 +175,32 @@ export class HUD {
     this.spinEl.textContent = 'STRAIGHT';
     this.container.appendChild(this.spinEl);
 
+    // Mobile spin controls
+    const spinControls = document.createElement('div');
+    spinControls.className = 'spin-controls';
+    const drawBtn = document.createElement('button');
+    drawBtn.className = 'spin-btn';
+    drawBtn.textContent = 'DRAW';
+    this.bindHoldEvents(drawBtn, () => this.onSpinDrawStart?.(), () => this.onSpinDrawEnd?.());
+    const fadeBtn = document.createElement('button');
+    fadeBtn.className = 'spin-btn';
+    fadeBtn.textContent = 'FADE';
+    this.bindHoldEvents(fadeBtn, () => this.onSpinFadeStart?.(), () => this.onSpinFadeEnd?.());
+    spinControls.appendChild(drawBtn);
+    spinControls.appendChild(fadeBtn);
+    this.container.appendChild(spinControls);
+
+    // Mobile hold-to-shoot button
+    const shotButton = document.createElement('button');
+    shotButton.className = 'shot-hold-btn';
+    shotButton.textContent = 'HOLD TO SHOOT';
+    this.bindHoldEvents(shotButton, () => this.onShotHoldStart?.(), () => this.onShotHoldEnd?.());
+    this.container.appendChild(shotButton);
+
     // Aim hint
     this.aimHint = document.createElement('div');
     this.aimHint.className = 'aim-hint';
-    this.aimHint.innerHTML = 'A/D or Drag to aim &nbsp;|&nbsp; Q/E or <b>\u25C0 \u25B6</b> change club &nbsp;|&nbsp; Z/C spin &nbsp;|&nbsp; SPACE or Tap to shoot &nbsp;|&nbsp; Scroll to adjust view';
+    this.aimHint.innerHTML = 'A/D or Drag to aim &nbsp;|&nbsp; Q/E or <b>\u25C0 \u25B6</b> change club &nbsp;|&nbsp; Z/C spin &nbsp;|&nbsp; SPACE or Hold to shoot &nbsp;|&nbsp; Scroll to adjust view';
     this.container.appendChild(this.aimHint);
 
     // Sponsor bar
@@ -202,6 +263,20 @@ export class HUD {
     let html = text;
     if (sub) html += `<div class="sub">${sub}</div>`;
     this.centerMessage.innerHTML = html;
+    this.centerMessage.classList.add('visible');
+  }
+
+  showMessageSafe(text: string, sub?: string) {
+    this.centerMessage.innerHTML = '';
+    const title = document.createElement('div');
+    title.textContent = text;
+    this.centerMessage.appendChild(title);
+    if (sub) {
+      const subEl = document.createElement('div');
+      subEl.className = 'sub';
+      subEl.textContent = sub;
+      this.centerMessage.appendChild(subEl);
+    }
     this.centerMessage.classList.add('visible');
   }
 
@@ -268,28 +343,51 @@ export class HUD {
   }
 
   setMultiplayerScorecard(players: { name: string; scores: number[]; color: number }[], pars: number[]) {
-    let html = '<table class="mp-scorecard"><tr><th></th>';
+    this.scorecardEl.innerHTML = '';
+    const table = document.createElement('table');
+    table.className = 'mp-scorecard';
+
+    const headerRow = document.createElement('tr');
+    headerRow.appendChild(document.createElement('th'));
     for (let i = 0; i < pars.length; i++) {
-      html += `<th>H${i + 1}</th>`;
+      const th = document.createElement('th');
+      th.textContent = `H${i + 1}`;
+      headerRow.appendChild(th);
     }
-    html += '<th>Tot</th></tr>';
+    const totalHeader = document.createElement('th');
+    totalHeader.textContent = 'Tot';
+    headerRow.appendChild(totalHeader);
+    table.appendChild(headerRow);
+
     for (const p of players) {
-      const colorHex = '#' + p.color.toString(16).padStart(6, '0');
-      html += `<tr><td style="color:${colorHex}">${p.name}</td>`;
+      const row = document.createElement('tr');
+      const nameCell = document.createElement('td');
+      nameCell.style.color = '#' + p.color.toString(16).padStart(6, '0');
+      nameCell.textContent = p.name;
+      row.appendChild(nameCell);
+
       let total = 0;
       for (let i = 0; i < pars.length; i++) {
         const s = p.scores[i];
+        const scoreCell = document.createElement('td');
         if (s !== undefined) {
           total += s;
-          html += `<td>${s}</td>`;
+          scoreCell.textContent = String(s);
         } else {
-          html += '<td>-</td>';
+          scoreCell.textContent = '-';
         }
+        row.appendChild(scoreCell);
       }
-      html += `<td><strong>${total || '-'}</strong></td></tr>`;
+
+      const totalCell = document.createElement('td');
+      const strong = document.createElement('strong');
+      strong.textContent = total > 0 ? String(total) : '-';
+      totalCell.appendChild(strong);
+      row.appendChild(totalCell);
+      table.appendChild(row);
     }
-    html += '</table>';
-    this.scorecardEl.innerHTML = html;
+
+    this.scorecardEl.appendChild(table);
   }
 
   setSponsor(text: string) {
@@ -467,30 +565,65 @@ export class HUD {
     table.className = 'round-summary';
 
     if (multiplayerData && multiplayerData.length > 0) {
-      // Multiplayer summary
-      let html = '<table class="summary-table"><tr><th>Hole</th><th>Par</th>';
-      for (const p of multiplayerData) {
-        const colorHex = '#' + p.color.toString(16).padStart(6, '0');
-        html += `<th style="color:${colorHex}">${p.name}</th>`;
-      }
-      html += '</tr>';
-      for (let i = 0; i < scores.length; i++) {
-        html += `<tr><td>${scores[i].hole}</td><td>${scores[i].par}</td>`;
-        for (const p of multiplayerData) {
-          html += `<td>${p.scores[i] ?? '-'}</td>`;
-        }
-        html += '</tr>';
-      }
-      // Totals
-      html += '<tr class="total-row"><td><strong>Total</strong></td><td><strong>' +
-        scores.reduce((a, s) => a + s.par, 0) + '</strong></td>';
-      for (const p of multiplayerData) {
-        const total = p.scores.reduce((a, b) => a + b, 0);
-        html += `<td><strong>${total}</strong></td>`;
-      }
-      html += '</tr></table>';
+      const summaryTable = document.createElement('table');
+      summaryTable.className = 'summary-table';
 
-      // Winner
+      const headerRow = document.createElement('tr');
+      const holeTh = document.createElement('th');
+      holeTh.textContent = 'Hole';
+      headerRow.appendChild(holeTh);
+      const parTh = document.createElement('th');
+      parTh.textContent = 'Par';
+      headerRow.appendChild(parTh);
+      for (const p of multiplayerData) {
+        const th = document.createElement('th');
+        th.style.color = '#' + p.color.toString(16).padStart(6, '0');
+        th.textContent = p.name;
+        headerRow.appendChild(th);
+      }
+      summaryTable.appendChild(headerRow);
+
+      for (let i = 0; i < scores.length; i++) {
+        const row = document.createElement('tr');
+        const holeCell = document.createElement('td');
+        holeCell.textContent = scores[i].hole;
+        row.appendChild(holeCell);
+        const parCell = document.createElement('td');
+        parCell.textContent = String(scores[i].par);
+        row.appendChild(parCell);
+        for (const p of multiplayerData) {
+          const cell = document.createElement('td');
+          const shotCount = p.scores[i];
+          cell.textContent = shotCount === undefined ? '-' : String(shotCount);
+          row.appendChild(cell);
+        }
+        summaryTable.appendChild(row);
+      }
+
+      const totalRow = document.createElement('tr');
+      totalRow.className = 'total-row';
+      const totalHoleCell = document.createElement('td');
+      const totalHoleStrong = document.createElement('strong');
+      totalHoleStrong.textContent = 'Total';
+      totalHoleCell.appendChild(totalHoleStrong);
+      totalRow.appendChild(totalHoleCell);
+
+      const totalParCell = document.createElement('td');
+      const totalParStrong = document.createElement('strong');
+      totalParStrong.textContent = String(scores.reduce((a, s) => a + s.par, 0));
+      totalParCell.appendChild(totalParStrong);
+      totalRow.appendChild(totalParCell);
+
+      for (const p of multiplayerData) {
+        const totalCell = document.createElement('td');
+        const totalStrong = document.createElement('strong');
+        totalStrong.textContent = String(p.scores.reduce((a, b) => a + b, 0));
+        totalCell.appendChild(totalStrong);
+        totalRow.appendChild(totalCell);
+      }
+      summaryTable.appendChild(totalRow);
+      table.appendChild(summaryTable);
+
       let bestTotal = Infinity;
       let winner = '';
       for (const p of multiplayerData) {
@@ -500,8 +633,10 @@ export class HUD {
           winner = p.name;
         }
       }
-      html += `<div class="winner-text">${winner} wins!</div>`;
-      table.innerHTML = html;
+      const winnerText = document.createElement('div');
+      winnerText.className = 'winner-text';
+      winnerText.textContent = `${winner} wins!`;
+      table.appendChild(winnerText);
     } else {
       // Single player summary
       let html = '<table class="summary-table"><tr><th>Hole</th><th>Par</th><th>Score</th><th>+/-</th></tr>';
