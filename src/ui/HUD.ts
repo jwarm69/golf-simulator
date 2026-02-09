@@ -138,7 +138,8 @@ export class HUD {
 
     this.powerLabel = document.createElement('div');
     this.powerLabel.className = 'power-meter-label';
-    this.powerLabel.textContent = 'SPACE / Hold to shoot';
+    const isTouch = matchMedia('(pointer: coarse)').matches;
+    this.powerLabel.textContent = isTouch ? 'Hold button to shoot' : 'SPACE / Hold to shoot';
     this.container.appendChild(this.powerLabel);
 
     // Center message
@@ -223,10 +224,14 @@ export class HUD {
     this.bindHoldEvents(shotButton, () => this.onShotHoldStart?.(), () => this.onShotHoldEnd?.());
     this.container.appendChild(shotButton);
 
-    // Aim hint
+    // Aim hint — different text for touch vs desktop
     this.aimHint = document.createElement('div');
     this.aimHint.className = 'aim-hint';
-    this.aimHint.innerHTML = 'A/D or Drag to aim &nbsp;|&nbsp; Q/E or <b>\u25C0 \u25B6</b> change club &nbsp;|&nbsp; Z/C spin &nbsp;|&nbsp; SPACE or Hold to shoot &nbsp;|&nbsp; Scroll to adjust view';
+    if (isTouch) {
+      this.aimHint.innerHTML = 'Swipe to aim &nbsp;|&nbsp; \u25C0 \u25B6 club &nbsp;|&nbsp; DRAW/FADE spin';
+    } else {
+      this.aimHint.innerHTML = 'A/D or Drag to aim &nbsp;|&nbsp; Q/E or <b>\u25C0 \u25B6</b> change club &nbsp;|&nbsp; Z/C spin &nbsp;|&nbsp; SPACE or Hold to shoot &nbsp;|&nbsp; Scroll to adjust view';
+    }
     this.container.appendChild(this.aimHint);
 
     // Sponsor bar
@@ -467,13 +472,6 @@ export class HUD {
       }
 
       card.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.hideHoleSelect();
-        this.onHoleSelect?.(hole.path);
-      });
-
-      card.addEventListener('touchstart', (e) => {
-        e.preventDefault();
         e.stopPropagation();
         this.hideHoleSelect();
         this.onHoleSelect?.(hole.path);

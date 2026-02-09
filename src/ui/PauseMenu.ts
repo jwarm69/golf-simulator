@@ -44,18 +44,30 @@ export class PauseMenu {
       menu.appendChild(el);
     }
 
-    // Controls reference
+    // Controls reference — show touch or keyboard based on device
     const controls = document.createElement('div');
     controls.className = 'pause-controls';
-    controls.innerHTML = [
-      '<strong>Controls</strong>',
-      'A/D or Drag — Aim',
-      'Q/E — Change Club',
-      'Z/C — Spin',
-      'SPACE — Charge & Shoot',
-      'Scroll — Adjust View',
-      'ESC — Pause',
-    ].join('<br>');
+    const isTouch = matchMedia('(pointer: coarse)').matches;
+    if (isTouch) {
+      controls.innerHTML = [
+        '<strong>Controls</strong>',
+        'Swipe \u2014 Aim',
+        '\u25C0 \u25B6 Buttons \u2014 Change Club',
+        'DRAW / FADE \u2014 Spin',
+        'HOLD TO SHOOT \u2014 Charge & Shoot',
+        '\u2630 \u2014 Pause',
+      ].join('<br>');
+    } else {
+      controls.innerHTML = [
+        '<strong>Controls</strong>',
+        'A/D or Drag \u2014 Aim',
+        'Q/E \u2014 Change Club',
+        'Z/C \u2014 Spin',
+        'SPACE \u2014 Charge & Shoot',
+        'Scroll \u2014 Adjust View',
+        'ESC \u2014 Pause',
+      ].join('<br>');
+    }
     menu.appendChild(controls);
 
     this.overlay.appendChild(menu);
