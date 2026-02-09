@@ -1,13 +1,15 @@
 import * as THREE from 'three';
+import { Sky } from 'three/addons/objects/Sky.js';
 
 export class Renderer {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
+  private sky: Sky;
+  private sunPosition = new THREE.Vector3();
 
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x87ceeb);
     this.scene.fog = new THREE.Fog(0x87ceeb, 80, 200);
 
     this.camera = new THREE.PerspectiveCamera(
@@ -24,10 +26,42 @@ export class Renderer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 0.5;
 
+    this.sky = this.setupSky();
     this.setupLighting();
 
     window.addEventListener('resize', () => this.onResize());
+  }
+
+  private setupSky(): Sky {
+    const sky = new Sky();
+    sky.scale.setScalar(450000);
+    this.scene.add(sky);
+
+    const uniforms = sky.material.uniforms;
+    uniforms['turbidity'].value = 2;
+    uniforms['rayleigh'].value = 1;
+    uniforms['mieCoefficient'].value = 0.005;
+    uniforms['mieDirectionalG'].value = 0.8;
+
+    // Sun position matching directional light at (30, 50, 20)
+    const phi = THREE.MathUtils.degToRad(90 - 50);
+    const theta = Math.atan2(30, 20);
+    this.sunPosition.setFromSphericalCoords(1, phi, theta);
+    uniforms['sunPosition'].value.copy(this.sunPosition);
+
+    // Update fog to match horizon color
+    this.scene.fog = new THREE.Fog(0xb0d4e8, 80, 200);
+
+    return sky;
+  }
+
+  setFogColor(color: number) {
+    if (this.scene.fog instanceof THREE.Fog) {
+      this.scene.fog.color.setHex(color);
+    }
   }
 
   private setupLighting() {

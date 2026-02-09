@@ -1,0 +1,71 @@
+{
+  "name": "Lakeside - Hole 2",
+  "par": 4,
+  "tee": { "x": 0, "z": 40 },
+  "hole": { "x": -5, "z": -35 },
+  "zones": [
+    {
+      "type": "tee",
+      "shape": "rect",
+      "position": { "x": 0, "z": 40 },
+      "size": { "width": 4, "height": 4 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": -1, "z": 15 },
+      "size": { "width": 9, "height": 46 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": -3, "z": -18 },
+      "size": { "width": 10, "height": 24 }
+    },
+    {
+      "type": "green",
+      "shape": "circle",
+      "position": { "x": -5, "z": -35 },
+      "radius": 7
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 3, "z": -33 },
+      "radius": 3
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": -12, "z": -36 },
+      "radius": 2.5
+    },
+    {
+      "type": "water",
+      "shape": "rect",
+      "position": { "x": 8, "z": 5 },
+      "size": { "width": 8, "height": 14 }
+    },
+    {
+      "type": "water",
+      "shape": "circle",
+      "position": { "x": -10, "z": -20 },
+      "radius": 4
+    },
+    {
+      "type": "rough",
+      "shape": "rect",
+      "position": { "x": -8, "z": 15 },
+      "size": { "width": 6, "height": 20 }
+    }
+  ],
+  "obstacles": [
+    { "type": "tree", "position": { "x": 6, "z": 25, "y": 0 } },
+    { "type": "tree", "position": { "x": -7, "z": 20, "y": 0 } },
+    { "type": "tree", "position": { "x": 5, "z": -5, "y": 0 } },
+    { "type": "tree", "position": { "x": -8, "z": -10, "y": 0 } },
+    { "type": "rock", "position": { "x": 3, "z": -15, "y": 0 } },
+    { "type": "tree", "position": { "x": -12, "z": -30, "y": 0 } },
+    { "type": "rock", "position": { "x": 6, "z": 0, "y": 0 } }
+  ]
+}

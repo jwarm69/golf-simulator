@@ -65,8 +65,8 @@ export class CameraController {
 
   private updateAim() {
     // A/D keys or right-drag or touch-drag to rotate
-    if (this.input.keys.has('a')) this.orbitAngle -= 0.03;
-    if (this.input.keys.has('d')) this.orbitAngle += 0.03;
+    if (this.input.keys.has('a') || this.input.keys.has('arrowleft')) this.orbitAngle -= 0.03;
+    if (this.input.keys.has('d') || this.input.keys.has('arrowright')) this.orbitAngle += 0.03;
 
     const drag = this.input.consumeRightDragDelta();
     this.orbitAngle += drag.x * 0.005;

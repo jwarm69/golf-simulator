@@ -1,0 +1,66 @@
+{
+  "name": "Lunar Landing - Hole 9",
+  "par": 4,
+  "theme": "moonscape",
+  "tee": { "x": 0, "z": 35 },
+  "hole": { "x": 7, "z": -28 },
+  "zones": [
+    {
+      "type": "tee",
+      "shape": "rect",
+      "position": { "x": 0, "z": 35 },
+      "size": { "width": 4, "height": 4 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 2, "z": 10 },
+      "size": { "width": 10, "height": 46 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 5, "z": -15 },
+      "size": { "width": 12, "height": 20 }
+    },
+    {
+      "type": "green",
+      "shape": "circle",
+      "position": { "x": 7, "z": -28 },
+      "radius": 6
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 0, "z": -26 },
+      "radius": 3
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 13, "z": -30 },
+      "radius": 2.5
+    },
+    {
+      "type": "water",
+      "shape": "circle",
+      "position": { "x": -5, "z": -5 },
+      "radius": 4
+    },
+    {
+      "type": "water",
+      "shape": "circle",
+      "position": { "x": 12, "z": -15 },
+      "radius": 3
+    }
+  ],
+  "obstacles": [
+    { "type": "rock", "position": { "x": -4, "z": 25, "y": 0 } },
+    { "type": "rock", "position": { "x": 8, "z": 20, "y": 0 } },
+    { "type": "rock", "position": { "x": -3, "z": 10, "y": 0 } },
+    { "type": "rock", "position": { "x": 10, "z": 5, "y": 0 } },
+    { "type": "rock", "position": { "x": -6, "z": -15, "y": 0 } },
+    { "type": "rock", "position": { "x": 14, "z": -22, "y": 0 } },
+    { "type": "rock", "position": { "x": 3, "z": -32, "y": 0 } }
+  ]
+}

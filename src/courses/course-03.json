@@ -1,0 +1,79 @@
+{
+  "name": "Pine Valley - Hole 3",
+  "par": 5,
+  "tee": { "x": 0, "z": 50 },
+  "hole": { "x": 8, "z": -45 },
+  "zones": [
+    {
+      "type": "tee",
+      "shape": "rect",
+      "position": { "x": 0, "z": 50 },
+      "size": { "width": 4, "height": 4 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 0, "z": 25 },
+      "size": { "width": 10, "height": 46 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 4, "z": -10 },
+      "size": { "width": 12, "height": 30 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 6, "z": -30 },
+      "size": { "width": 10, "height": 16 }
+    },
+    {
+      "type": "green",
+      "shape": "circle",
+      "position": { "x": 8, "z": -45 },
+      "radius": 8
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 0, "z": -43 },
+      "radius": 3.5
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 15, "z": -47 },
+      "radius": 3
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": -3, "z": 0 },
+      "radius": 2.5
+    },
+    {
+      "type": "water",
+      "shape": "rect",
+      "position": { "x": -6, "z": -20 },
+      "size": { "width": 6, "height": 10 }
+    },
+    {
+      "type": "water",
+      "shape": "rect",
+      "position": { "x": 14, "z": -30 },
+      "size": { "width": 5, "height": 8 }
+    }
+  ],
+  "obstacles": [
+    { "type": "tree", "position": { "x": 7, "z": 35, "y": 0 } },
+    { "type": "tree", "position": { "x": -6, "z": 30, "y": 0 } },
+    { "type": "tree", "position": { "x": -5, "z": 10, "y": 0 } },
+    { "type": "tree", "position": { "x": 10, "z": 5, "y": 0 } },
+    { "type": "tree", "position": { "x": -4, "z": -8, "y": 0 } },
+    { "type": "tree", "position": { "x": 12, "z": -15, "y": 0 } },
+    { "type": "rock", "position": { "x": 2, "z": -25, "y": 0 } },
+    { "type": "tree", "position": { "x": -2, "z": -38, "y": 0 } },
+    { "type": "tree", "position": { "x": 16, "z": -42, "y": 0 } }
+  ]
+}

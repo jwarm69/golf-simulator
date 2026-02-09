@@ -1,0 +1,59 @@
+{
+  "name": "Frozen Fjord - Hole 5",
+  "par": 3,
+  "theme": "arctic",
+  "tee": { "x": 0, "z": 28 },
+  "hole": { "x": 5, "z": -22 },
+  "zones": [
+    {
+      "type": "tee",
+      "shape": "rect",
+      "position": { "x": 0, "z": 28 },
+      "size": { "width": 4, "height": 4 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 2, "z": 5 },
+      "size": { "width": 10, "height": 42 }
+    },
+    {
+      "type": "green",
+      "shape": "circle",
+      "position": { "x": 5, "z": -22 },
+      "radius": 6
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": -3, "z": -20 },
+      "radius": 2.5
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 10, "z": -25 },
+      "radius": 3
+    },
+    {
+      "type": "water",
+      "shape": "rect",
+      "position": { "x": -6, "z": 0 },
+      "size": { "width": 5, "height": 10 }
+    },
+    {
+      "type": "water",
+      "shape": "rect",
+      "position": { "x": 10, "z": -10 },
+      "size": { "width": 6, "height": 8 }
+    }
+  ],
+  "obstacles": [
+    { "type": "tree", "position": { "x": -4, "z": 20, "y": 0 } },
+    { "type": "tree", "position": { "x": 8, "z": 15, "y": 0 } },
+    { "type": "tree", "position": { "x": -5, "z": -5, "y": 0 } },
+    { "type": "tree", "position": { "x": 7, "z": -8, "y": 0 } },
+    { "type": "rock", "position": { "x": -2, "z": 10, "y": 0 } },
+    { "type": "rock", "position": { "x": 12, "z": -18, "y": 0 } }
+  ]
+}

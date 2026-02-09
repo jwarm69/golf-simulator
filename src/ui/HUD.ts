@@ -1,3 +1,10 @@
+export interface HoleOption {
+  path: string;
+  name: string;
+  par: number;
+  best?: number;
+}
+
 export class HUD {
   private container: HTMLElement;
   private topLeft!: HTMLElement;
@@ -13,9 +20,21 @@ export class HUD {
   private distanceEl!: HTMLElement;
   private clubEl!: HTMLElement;
   private scorecardEl!: HTMLElement;
+  private sponsorEl!: HTMLElement;
+  private holeSelectOverlay!: HTMLElement;
+  private windEl!: HTMLElement;
+  private windArrow!: HTMLElement;
+  private windSpeed!: HTMLElement;
+  private spinEl!: HTMLElement;
+  private turnBanner!: HTMLElement;
+  private multiplayerSetupOverlay!: HTMLElement;
+  private roundSummaryOverlay!: HTMLElement;
 
   onClubPrev?: () => void;
   onClubNext?: () => void;
+  onHoleSelect?: (path: string) => void;
+  onMultiplayerSetup?: (names: string[]) => void;
+  onSinglePlayer?: () => void;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -39,7 +58,7 @@ export class HUD {
     this.topLeft.appendChild(this.scorecardEl);
     this.container.appendChild(this.topLeft);
 
-    // Top right: distance
+    // Top right: distance + wind
     this.topRight = document.createElement('div');
     this.topRight.className = 'hud-top-right';
     this.distanceEl = document.createElement('div');
@@ -49,6 +68,19 @@ export class HUD {
     distLabel.textContent = 'TO PIN';
     this.topRight.appendChild(this.distanceEl);
     this.topRight.appendChild(distLabel);
+
+    // Wind indicator
+    this.windEl = document.createElement('div');
+    this.windEl.className = 'wind-indicator';
+    this.windArrow = document.createElement('div');
+    this.windArrow.className = 'wind-arrow';
+    this.windArrow.textContent = '\u2191';
+    this.windSpeed = document.createElement('div');
+    this.windSpeed.className = 'wind-speed';
+    this.windEl.appendChild(this.windArrow);
+    this.windEl.appendChild(this.windSpeed);
+    this.topRight.appendChild(this.windEl);
+
     this.container.appendChild(this.topRight);
 
     // Power meter
@@ -61,7 +93,7 @@ export class HUD {
 
     this.powerLabel = document.createElement('div');
     this.powerLabel.className = 'power-meter-label';
-    this.powerLabel.textContent = 'Hold SPACE to set power';
+    this.powerLabel.textContent = 'SPACE / Tap to shoot';
     this.container.appendChild(this.powerLabel);
 
     // Center message
@@ -69,7 +101,12 @@ export class HUD {
     this.centerMessage.className = 'center-message';
     this.container.appendChild(this.centerMessage);
 
-    // Club display with mobile buttons
+    // Turn banner (multiplayer)
+    this.turnBanner = document.createElement('div');
+    this.turnBanner.className = 'turn-banner';
+    this.container.appendChild(this.turnBanner);
+
+    // Club display with buttons (visible on all devices)
     const clubRow = document.createElement('div');
     clubRow.className = 'club-row';
 
@@ -93,11 +130,38 @@ export class HUD {
     clubRow.appendChild(nextBtn);
     this.container.appendChild(clubRow);
 
+    // Spin indicator
+    this.spinEl = document.createElement('div');
+    this.spinEl.className = 'spin-indicator';
+    this.spinEl.textContent = 'STRAIGHT';
+    this.container.appendChild(this.spinEl);
+
     // Aim hint
     this.aimHint = document.createElement('div');
     this.aimHint.className = 'aim-hint';
-    this.aimHint.textContent = 'A/D to aim  |  Q/E change club  |  SPACE to shoot  |  Scroll to adjust view';
+    this.aimHint.innerHTML = 'A/D or Drag to aim &nbsp;|&nbsp; Q/E or <b>\u25C0 \u25B6</b> change club &nbsp;|&nbsp; Z/C spin &nbsp;|&nbsp; SPACE or Tap to shoot &nbsp;|&nbsp; Scroll to adjust view';
     this.container.appendChild(this.aimHint);
+
+    // Sponsor bar
+    this.sponsorEl = document.createElement('div');
+    this.sponsorEl.className = 'sponsor-bar';
+    this.sponsorEl.innerHTML = 'Sponsored by <strong>Warman Golf</strong>';
+    this.container.appendChild(this.sponsorEl);
+
+    // Hole selection overlay (hidden by default)
+    this.holeSelectOverlay = document.createElement('div');
+    this.holeSelectOverlay.className = 'hole-select-overlay';
+    this.container.appendChild(this.holeSelectOverlay);
+
+    // Multiplayer setup overlay
+    this.multiplayerSetupOverlay = document.createElement('div');
+    this.multiplayerSetupOverlay.className = 'hole-select-overlay';
+    this.container.appendChild(this.multiplayerSetupOverlay);
+
+    // Round summary overlay
+    this.roundSummaryOverlay = document.createElement('div');
+    this.roundSummaryOverlay.className = 'hole-select-overlay';
+    this.container.appendChild(this.roundSummaryOverlay);
   }
 
   setHoleName(name: string) {
@@ -121,7 +185,7 @@ export class HUD {
     const pct = power * 100;
     this.powerFill.style.width = `${pct}%`;
 
-    // Color gradient: green → yellow → red
+    // Color gradient: green -> yellow -> red
     if (power < 0.5) {
       const t = power / 0.5;
       const r = Math.round(t * 255);
@@ -150,15 +214,332 @@ export class HUD {
   }
 
   setClub(name: string, maxDist: number) {
-    this.clubEl.textContent = `${name}  —  ${maxDist}m`;
+    this.clubEl.textContent = `${name}  \u2014  ${maxDist}m`;
   }
 
-  setScorecard(scores: number[], par: number) {
-    const parts = scores.map((s, i) => {
-      const diff = s - par;
-      const label = diff === 0 ? 'E' : (diff > 0 ? `+${diff}` : `${diff}`);
-      return `R${i + 1}: ${s} (${label})`;
+  setWind(directionDeg: number, speedMPH: number) {
+    this.windArrow.style.transform = `rotate(${directionDeg}deg)`;
+    this.windSpeed.textContent = `${speedMPH} mph`;
+    const opacity = Math.min(1, speedMPH / 15);
+    this.windEl.style.opacity = String(Math.max(0.3, opacity));
+  }
+
+  setSpin(label: string) {
+    this.spinEl.textContent = label;
+  }
+
+  setTurnBanner(text: string, color?: string) {
+    this.turnBanner.textContent = text;
+    this.turnBanner.style.borderColor = color ?? 'rgba(255,255,255,0.5)';
+    this.turnBanner.classList.add('visible');
+    setTimeout(() => this.turnBanner.classList.remove('visible'), 2000);
+  }
+
+  hideTurnBanner() {
+    this.turnBanner.classList.remove('visible');
+  }
+
+  setScorecard(scores: { hole: string; strokes: number; par: number }[]) {
+    if (scores.length <= 3) {
+      const parts = scores.map((s) => {
+        const diff = s.strokes - s.par;
+        const label = diff === 0 ? 'E' : (diff > 0 ? `+${diff}` : `${diff}`);
+        return `${s.hole}: ${s.strokes} (${label})`;
+      });
+      this.scorecardEl.textContent = parts.join('  |  ');
+    } else {
+      // Scrollable scorecard for more holes
+      let html = '<div class="scorecard-scroll">';
+      let totalStrokes = 0;
+      let totalPar = 0;
+      for (const s of scores) {
+        const diff = s.strokes - s.par;
+        const label = diff === 0 ? 'E' : (diff > 0 ? `+${diff}` : `${diff}`);
+        html += `<span>${s.hole}: ${s.strokes}(${label})</span> `;
+        totalStrokes += s.strokes;
+        totalPar += s.par;
+      }
+      const totalDiff = totalStrokes - totalPar;
+      const totalLabel = totalDiff === 0 ? 'E' : (totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`);
+      html += `<br><strong>Total: ${totalStrokes} (${totalLabel})</strong>`;
+      html += '</div>';
+      this.scorecardEl.innerHTML = html;
+    }
+  }
+
+  setMultiplayerScorecard(players: { name: string; scores: number[]; color: number }[], pars: number[]) {
+    let html = '<table class="mp-scorecard"><tr><th></th>';
+    for (let i = 0; i < pars.length; i++) {
+      html += `<th>H${i + 1}</th>`;
+    }
+    html += '<th>Tot</th></tr>';
+    for (const p of players) {
+      const colorHex = '#' + p.color.toString(16).padStart(6, '0');
+      html += `<tr><td style="color:${colorHex}">${p.name}</td>`;
+      let total = 0;
+      for (let i = 0; i < pars.length; i++) {
+        const s = p.scores[i];
+        if (s !== undefined) {
+          total += s;
+          html += `<td>${s}</td>`;
+        } else {
+          html += '<td>-</td>';
+        }
+      }
+      html += `<td><strong>${total || '-'}</strong></td></tr>`;
+    }
+    html += '</table>';
+    this.scorecardEl.innerHTML = html;
+  }
+
+  setSponsor(text: string) {
+    this.sponsorEl.innerHTML = text;
+  }
+
+  showHoleSelect(holes: HoleOption[]) {
+    this.holeSelectOverlay.innerHTML = '';
+    this.holeSelectOverlay.classList.add('visible');
+
+    const title = document.createElement('div');
+    title.className = 'hole-select-title';
+    title.textContent = 'Select a Hole';
+    this.holeSelectOverlay.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'hole-select-grid';
+
+    for (const hole of holes) {
+      const card = document.createElement('button');
+      card.className = 'hole-card';
+
+      const name = document.createElement('div');
+      name.className = 'hole-card-name';
+      name.textContent = hole.name;
+
+      const par = document.createElement('div');
+      par.className = 'hole-card-par';
+      par.textContent = `Par ${hole.par}`;
+
+      card.appendChild(name);
+      card.appendChild(par);
+
+      if (hole.best !== undefined) {
+        const best = document.createElement('div');
+        best.className = 'hole-card-best';
+        best.textContent = `Best: ${hole.best}`;
+        card.appendChild(best);
+      }
+
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.hideHoleSelect();
+        this.onHoleSelect?.(hole.path);
+      });
+
+      card.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.hideHoleSelect();
+        this.onHoleSelect?.(hole.path);
+      });
+
+      grid.appendChild(card);
+    }
+
+    this.holeSelectOverlay.appendChild(grid);
+
+    // Multiplayer button
+    const mpBtn = document.createElement('button');
+    mpBtn.className = 'hole-card';
+    mpBtn.style.marginTop = '16px';
+    mpBtn.innerHTML = '<div class="hole-card-name">Multiplayer</div><div class="hole-card-par">2-4 Players</div>';
+    mpBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.hideHoleSelect();
+      this.showMultiplayerSetup();
     });
-    this.scorecardEl.textContent = parts.join('  |  ');
+    this.holeSelectOverlay.appendChild(mpBtn);
+  }
+
+  hideHoleSelect() {
+    this.holeSelectOverlay.classList.remove('visible');
+  }
+
+  showMultiplayerSetup() {
+    this.multiplayerSetupOverlay.innerHTML = '';
+    this.multiplayerSetupOverlay.classList.add('visible');
+
+    const title = document.createElement('div');
+    title.className = 'hole-select-title';
+    title.textContent = 'Multiplayer Setup';
+    this.multiplayerSetupOverlay.appendChild(title);
+
+    const form = document.createElement('div');
+    form.className = 'mp-setup';
+
+    const countLabel = document.createElement('div');
+    countLabel.className = 'mp-label';
+    countLabel.textContent = 'Number of Players:';
+    form.appendChild(countLabel);
+
+    const countRow = document.createElement('div');
+    countRow.className = 'mp-count-row';
+    let playerCount = 2;
+    const inputs: HTMLInputElement[] = [];
+
+    const inputsContainer = document.createElement('div');
+    inputsContainer.className = 'mp-inputs';
+
+    const updateInputs = () => {
+      inputsContainer.innerHTML = '';
+      inputs.length = 0;
+      for (let i = 0; i < playerCount; i++) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = `Player ${i + 1}`;
+        input.value = `Player ${i + 1}`;
+        input.className = 'mp-name-input';
+        inputs.push(input);
+        inputsContainer.appendChild(input);
+      }
+    };
+
+    for (let n = 2; n <= 4; n++) {
+      const btn = document.createElement('button');
+      btn.className = 'club-btn';
+      btn.textContent = String(n);
+      btn.style.pointerEvents = 'auto';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playerCount = n;
+        countRow.querySelectorAll('.club-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateInputs();
+      });
+      if (n === 2) btn.classList.add('active');
+      countRow.appendChild(btn);
+    }
+
+    form.appendChild(countRow);
+    form.appendChild(inputsContainer);
+    updateInputs();
+
+    const startBtn = document.createElement('button');
+    startBtn.className = 'hole-card';
+    startBtn.style.marginTop = '16px';
+    startBtn.innerHTML = '<div class="hole-card-name">Start Game</div>';
+    startBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const names = inputs.map(i => i.value || i.placeholder);
+      this.multiplayerSetupOverlay.classList.remove('visible');
+      this.onMultiplayerSetup?.(names);
+    });
+    form.appendChild(startBtn);
+
+    const backBtn = document.createElement('button');
+    backBtn.className = 'hole-card';
+    backBtn.style.marginTop = '8px';
+    backBtn.innerHTML = '<div class="hole-card-name">Back</div>';
+    backBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.multiplayerSetupOverlay.classList.remove('visible');
+      this.onSinglePlayer?.();
+    });
+    form.appendChild(backBtn);
+
+    this.multiplayerSetupOverlay.appendChild(form);
+  }
+
+  showRoundSummary(
+    scores: { hole: string; strokes: number; par: number }[],
+    personalBestTotal?: number,
+    multiplayerData?: { name: string; scores: number[]; color: number }[]
+  ) {
+    this.roundSummaryOverlay.innerHTML = '';
+    this.roundSummaryOverlay.classList.add('visible');
+
+    const title = document.createElement('div');
+    title.className = 'hole-select-title';
+    title.textContent = 'Round Complete!';
+    this.roundSummaryOverlay.appendChild(title);
+
+    const table = document.createElement('div');
+    table.className = 'round-summary';
+
+    if (multiplayerData && multiplayerData.length > 0) {
+      // Multiplayer summary
+      let html = '<table class="summary-table"><tr><th>Hole</th><th>Par</th>';
+      for (const p of multiplayerData) {
+        const colorHex = '#' + p.color.toString(16).padStart(6, '0');
+        html += `<th style="color:${colorHex}">${p.name}</th>`;
+      }
+      html += '</tr>';
+      for (let i = 0; i < scores.length; i++) {
+        html += `<tr><td>${scores[i].hole}</td><td>${scores[i].par}</td>`;
+        for (const p of multiplayerData) {
+          html += `<td>${p.scores[i] ?? '-'}</td>`;
+        }
+        html += '</tr>';
+      }
+      // Totals
+      html += '<tr class="total-row"><td><strong>Total</strong></td><td><strong>' +
+        scores.reduce((a, s) => a + s.par, 0) + '</strong></td>';
+      for (const p of multiplayerData) {
+        const total = p.scores.reduce((a, b) => a + b, 0);
+        html += `<td><strong>${total}</strong></td>`;
+      }
+      html += '</tr></table>';
+
+      // Winner
+      let bestTotal = Infinity;
+      let winner = '';
+      for (const p of multiplayerData) {
+        const total = p.scores.reduce((a, b) => a + b, 0);
+        if (total < bestTotal) {
+          bestTotal = total;
+          winner = p.name;
+        }
+      }
+      html += `<div class="winner-text">${winner} wins!</div>`;
+      table.innerHTML = html;
+    } else {
+      // Single player summary
+      let html = '<table class="summary-table"><tr><th>Hole</th><th>Par</th><th>Score</th><th>+/-</th></tr>';
+      let totalStrokes = 0;
+      let totalPar = 0;
+      for (const s of scores) {
+        const diff = s.strokes - s.par;
+        const label = diff === 0 ? 'E' : (diff > 0 ? `+${diff}` : `${diff}`);
+        html += `<tr><td>${s.hole}</td><td>${s.par}</td><td>${s.strokes}</td><td>${label}</td></tr>`;
+        totalStrokes += s.strokes;
+        totalPar += s.par;
+      }
+      const totalDiff = totalStrokes - totalPar;
+      const totalLabel = totalDiff === 0 ? 'E' : (totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`);
+      html += `<tr class="total-row"><td><strong>Total</strong></td><td><strong>${totalPar}</strong></td><td><strong>${totalStrokes}</strong></td><td><strong>${totalLabel}</strong></td></tr>`;
+      html += '</table>';
+
+      if (personalBestTotal !== undefined) {
+        html += `<div class="pb-total">Personal Best: ${personalBestTotal}</div>`;
+      }
+      table.innerHTML = html;
+    }
+
+    this.roundSummaryOverlay.appendChild(table);
+
+    const playAgainBtn = document.createElement('button');
+    playAgainBtn.className = 'hole-card';
+    playAgainBtn.style.marginTop = '16px';
+    playAgainBtn.innerHTML = '<div class="hole-card-name">Play Again</div>';
+    playAgainBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.roundSummaryOverlay.classList.remove('visible');
+      this.onSinglePlayer?.();
+    });
+    this.roundSummaryOverlay.appendChild(playAgainBtn);
+  }
+
+  hideRoundSummary() {
+    this.roundSummaryOverlay.classList.remove('visible');
   }
 }

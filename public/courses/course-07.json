@@ -1,0 +1,66 @@
+{
+  "name": "Paradise Cove - Hole 7",
+  "par": 4,
+  "theme": "tropical",
+  "tee": { "x": 0, "z": 38 },
+  "hole": { "x": 4, "z": -32 },
+  "zones": [
+    {
+      "type": "tee",
+      "shape": "rect",
+      "position": { "x": 0, "z": 38 },
+      "size": { "width": 4, "height": 4 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 1, "z": 12 },
+      "size": { "width": 10, "height": 48 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": 3, "z": -20 },
+      "size": { "width": 12, "height": 18 }
+    },
+    {
+      "type": "green",
+      "shape": "circle",
+      "position": { "x": 4, "z": -32 },
+      "radius": 7
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": -4, "z": -30 },
+      "radius": 3
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 10, "z": -35 },
+      "radius": 2.5
+    },
+    {
+      "type": "water",
+      "shape": "circle",
+      "position": { "x": -8, "z": 5 },
+      "radius": 5
+    },
+    {
+      "type": "water",
+      "shape": "rect",
+      "position": { "x": 10, "z": -10 },
+      "size": { "width": 6, "height": 10 }
+    }
+  ],
+  "obstacles": [
+    { "type": "tree", "position": { "x": -6, "z": 30, "y": 0 } },
+    { "type": "tree", "position": { "x": 8, "z": 25, "y": 0 } },
+    { "type": "tree", "position": { "x": -5, "z": 15, "y": 0 } },
+    { "type": "tree", "position": { "x": 9, "z": 0, "y": 0 } },
+    { "type": "tree", "position": { "x": -7, "z": -15, "y": 0 } },
+    { "type": "tree", "position": { "x": 12, "z": -28, "y": 0 } },
+    { "type": "rock", "position": { "x": 6, "z": 10, "y": 0 } }
+  ]
+}

@@ -146,6 +146,10 @@ export class InputManager {
     return false;
   }
 
+  isKeyDown(key: string): boolean {
+    return this.keys.has(key);
+  }
+
   consumeTouchDragDeltaX(): number {
     const d = this.touchDragDeltaX;
     this.touchDragDeltaX = 0;

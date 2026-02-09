@@ -1,0 +1,58 @@
+{
+  "name": "Scorched Sands - Hole 4",
+  "par": 3,
+  "theme": "desert",
+  "tee": { "x": 0, "z": 25 },
+  "hole": { "x": -3, "z": -20 },
+  "zones": [
+    {
+      "type": "tee",
+      "shape": "rect",
+      "position": { "x": 0, "z": 25 },
+      "size": { "width": 4, "height": 4 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": -1, "z": 5 },
+      "size": { "width": 8, "height": 36 }
+    },
+    {
+      "type": "green",
+      "shape": "circle",
+      "position": { "x": -3, "z": -20 },
+      "radius": 5
+    },
+    {
+      "type": "sand",
+      "shape": "rect",
+      "position": { "x": 6, "z": 10 },
+      "size": { "width": 8, "height": 12 }
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": -8, "z": -15 },
+      "radius": 4
+    },
+    {
+      "type": "sand",
+      "shape": "rect",
+      "position": { "x": 4, "z": -22 },
+      "size": { "width": 5, "height": 6 }
+    },
+    {
+      "type": "water",
+      "shape": "circle",
+      "position": { "x": 8, "z": -5 },
+      "radius": 3
+    }
+  ],
+  "obstacles": [
+    { "type": "tree", "position": { "x": -6, "z": 15, "y": 0 } },
+    { "type": "tree", "position": { "x": 5, "z": 0, "y": 0 } },
+    { "type": "rock", "position": { "x": -5, "z": -8, "y": 0 } },
+    { "type": "rock", "position": { "x": 7, "z": -18, "y": 0 } },
+    { "type": "rock", "position": { "x": -8, "z": 5, "y": 0 } }
+  ]
+}

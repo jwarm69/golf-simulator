@@ -33,6 +33,7 @@ export interface CourseData {
   hole: Vec2;
   zones: ZoneData[];
   obstacles: ObstacleData[];
+  theme?: string;
 }
 
 export const ZONE_PHYSICS: Record<ZoneType, { friction: number; restitution: number; rollingResistance: number }> = {
@@ -51,6 +52,52 @@ export const ZONE_COLORS: Record<ZoneType, number> = {
   rough: 0x3d7a32,
   sand: 0xe8d68c,
   water: 0x3a8fbf,
+};
+
+export type ThemeName = 'meadow' | 'lakeside' | 'forest' | 'desert' | 'arctic' | 'volcanic' | 'tropical' | 'canyon' | 'moonscape';
+
+export interface ThemeColors {
+  zones: Record<ZoneType, number>;
+  fog: number;
+}
+
+export const THEME_COLORS: Record<ThemeName, ThemeColors> = {
+  meadow: {
+    zones: { tee: 0x4a8c3f, fairway: 0x5da84e, green: 0x6ec85e, rough: 0x3d7a32, sand: 0xe8d68c, water: 0x3a8fbf },
+    fog: 0xb0d4e8,
+  },
+  lakeside: {
+    zones: { tee: 0x4a8c3f, fairway: 0x5da84e, green: 0x6ec85e, rough: 0x3d7a32, sand: 0xe8d68c, water: 0x3a8fbf },
+    fog: 0xb0d4e8,
+  },
+  forest: {
+    zones: { tee: 0x3a6e30, fairway: 0x4a8a3e, green: 0x5ab84e, rough: 0x2d5a22, sand: 0xd8c67c, water: 0x2a7faf },
+    fog: 0x8ab8a8,
+  },
+  desert: {
+    zones: { tee: 0xb8a060, fairway: 0xc4a868, green: 0x7aaa50, rough: 0xa89050, sand: 0xd4b878, water: 0x4a9abf },
+    fog: 0xe0c890,
+  },
+  arctic: {
+    zones: { tee: 0xd0e0e8, fairway: 0xe0e8f0, green: 0xc0e8c0, rough: 0xc0d0d8, sand: 0xf0f0f0, water: 0x80b8d8 },
+    fog: 0xe8f0f8,
+  },
+  volcanic: {
+    zones: { tee: 0x505050, fairway: 0x606060, green: 0x4a8a3a, rough: 0x3a3a3a, sand: 0x808080, water: 0xcc4400 },
+    fog: 0x804020,
+  },
+  tropical: {
+    zones: { tee: 0x40a040, fairway: 0x50b850, green: 0x60d060, rough: 0x308830, sand: 0xf0c890, water: 0x40c0c0 },
+    fog: 0xa0d8e0,
+  },
+  canyon: {
+    zones: { tee: 0xa06040, fairway: 0xb07050, green: 0x70a050, rough: 0x905838, sand: 0xc08060, water: 0x3080a0 },
+    fog: 0xc0a080,
+  },
+  moonscape: {
+    zones: { tee: 0x808080, fairway: 0x909090, green: 0x70a870, rough: 0x606060, sand: 0xa0a0a0, water: 0x304060 },
+    fog: 0x505060,
+  },
 };
 
 export interface ClubData {

@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { BALL_MASS } from '../types';
 
-const ARC_POINTS = 40;
-const GRAVITY = -9.82;
+const ARC_POINTS = 60;
+const GRAVITY = new THREE.Vector3(0, -9.82, 0);
 const DEFAULT_POWER_PREVIEW = 0.5;
+const SIM_DT = 0.02; // 50 steps per second
+const MAX_SIM_TIME = 8.0; // max 8 seconds of flight
 
 export class TrajectoryPreview {
   private dots: THREE.Points;
@@ -33,7 +35,7 @@ export class TrajectoryPreview {
 
     // Landing ring
     const ringGeo = new THREE.RingGeometry(0.3, 0.45, 32);
-    ringGeo.rotateX(-Math.PI / 2); // lay flat on ground
+    ringGeo.rotateX(-Math.PI / 2);
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0xffff44,
       transparent: true,
@@ -45,7 +47,16 @@ export class TrajectoryPreview {
     scene.add(this.ring);
   }
 
-  update(ballPos: THREE.Vector3, orbitAngle: number, power: number | null, loftAngle: number, maxSpeed: number) {
+  update(
+    ballPos: THREE.Vector3,
+    orbitAngle: number,
+    power: number | null,
+    loftAngle: number,
+    maxSpeed: number,
+    wind?: THREE.Vector3,
+    spinAmount?: number,
+    magnusCoeff?: number
+  ) {
     const p = power !== null ? power : DEFAULT_POWER_PREVIEW;
     const shotPower = p * maxSpeed * BALL_MASS;
 
@@ -61,56 +72,93 @@ export class TrajectoryPreview {
       dz * horizontalSpeed
     ).normalize();
 
-    // Initial velocity = direction * (shotPower / BALL_MASS) since impulse = mass * velocity
-    const v0x = dir.x * (shotPower / BALL_MASS);
-    const v0y = dir.y * (shotPower / BALL_MASS);
-    const v0z = dir.z * (shotPower / BALL_MASS);
+    // Initial velocity
+    const v0 = shotPower / BALL_MASS;
+    const velocity = new THREE.Vector3(dir.x * v0, dir.y * v0, dir.z * v0);
+    const position = ballPos.clone();
 
-    // Find total flight time (when y returns to ground level)
-    // y(t) = y0 + v0y*t + 0.5*g*t^2 = 0
-    // Using quadratic: t = (-v0y - sqrt(v0y^2 + 2*g*y0)) / g
-    const y0 = ballPos.y;
-    const discriminant = v0y * v0y - 2 * GRAVITY * y0;
-    const totalTime = discriminant > 0
-      ? (-v0y - Math.sqrt(discriminant)) / GRAVITY
-      : (2 * v0y) / -GRAVITY; // fallback: simple symmetric arc
+    const windForce = wind ?? new THREE.Vector3();
+    const spin = spinAmount ?? 0;
+    const mCoeff = magnusCoeff ?? 0.3;
 
-    const tMax = Math.max(totalTime, 0.1);
-    const dt = tMax / (ARC_POINTS - 1);
-
+    // Numerical integration (Euler method)
+    let landed = false;
     let landX = ballPos.x;
     let landZ = ballPos.z;
-    let foundLanding = false;
+    let totalSteps = Math.floor(MAX_SIM_TIME / SIM_DT);
+    const pointInterval = Math.max(1, Math.floor(totalSteps / ARC_POINTS));
 
-    for (let i = 0; i < ARC_POINTS; i++) {
-      const t = i * dt;
-      const x = ballPos.x + v0x * t;
-      let y = y0 + v0y * t + 0.5 * GRAVITY * t * t;
-      const z = ballPos.z + v0z * t;
+    let pointIndex = 0;
+    let stepCount = 0;
 
-      // Clamp to ground
-      if (y < 0.01 && i > 0) {
-        y = 0.01;
-        if (!foundLanding) {
-          // Interpolate exact landing position
-          const tPrev = (i - 1) * dt;
-          const yPrev = y0 + v0y * tPrev + 0.5 * GRAVITY * tPrev * tPrev;
-          const yCurr = y0 + v0y * t + 0.5 * GRAVITY * t * t;
-          const frac = yPrev / (yPrev - yCurr);
-          const tLand = tPrev + frac * dt;
-          landX = ballPos.x + v0x * tLand;
-          landZ = ballPos.z + v0z * tLand;
-          foundLanding = true;
+    // Store the first point
+    if (pointIndex < ARC_POINTS) {
+      this.positionAttr.setXYZ(pointIndex, position.x, position.y, position.z);
+      pointIndex++;
+    }
+
+    for (let step = 0; step < totalSteps && pointIndex < ARC_POINTS; step++) {
+      // Compute acceleration: gravity + wind + magnus
+      const accel = GRAVITY.clone();
+
+      // Wind (only when airborne)
+      if (position.y > 0.3) {
+        accel.add(windForce);
+      }
+
+      // Magnus force (only when airborne and spin is nonzero)
+      if (Math.abs(spin) > 0.01 && position.y > 0.3) {
+        const speed = velocity.length();
+        if (speed > 0.1) {
+          const perpX = -velocity.z;
+          const perpZ = velocity.x;
+          const perpLen = Math.sqrt(perpX * perpX + perpZ * perpZ);
+          if (perpLen > 0.001) {
+            const scale = mCoeff * spin * speed;
+            accel.x += (perpX / perpLen) * scale;
+            accel.z += (perpZ / perpLen) * scale;
+          }
         }
       }
 
-      this.positionAttr.setXYZ(i, x, y, z);
+      // Euler integration
+      velocity.add(accel.clone().multiplyScalar(SIM_DT));
+      position.add(velocity.clone().multiplyScalar(SIM_DT));
+      stepCount++;
+
+      // Ground check
+      if (position.y < 0.01 && step > 2) {
+        position.y = 0.01;
+        if (!landed) {
+          landX = position.x;
+          landZ = position.z;
+          landed = true;
+        }
+        // Continue a bit on ground to show roll
+        velocity.y = 0;
+        velocity.multiplyScalar(0.95); // ground friction
+      }
+
+      // Store point at intervals
+      if (stepCount % pointInterval === 0 || landed) {
+        if (pointIndex < ARC_POINTS) {
+          this.positionAttr.setXYZ(pointIndex, position.x, position.y, position.z);
+          pointIndex++;
+        }
+        if (landed && velocity.length() < 0.5) break;
+      }
     }
 
-    if (!foundLanding) {
-      // Use last point as landing
-      landX = ballPos.x + v0x * tMax;
-      landZ = ballPos.z + v0z * tMax;
+    // Fill remaining points at the landing position
+    for (let i = pointIndex; i < ARC_POINTS; i++) {
+      const lx = landed ? landX : position.x;
+      const lz = landed ? landZ : position.z;
+      this.positionAttr.setXYZ(i, lx, 0.01, lz);
+    }
+
+    if (!landed) {
+      landX = position.x;
+      landZ = position.z;
     }
 
     this.positionAttr.needsUpdate = true;

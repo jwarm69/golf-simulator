@@ -11,6 +11,10 @@ export class GolfBall {
   isSleeping = false;
   lastStablePosition = new THREE.Vector3();
 
+  // Landing detection
+  private wasAirborne = false;
+  private landingEvent = false;
+
   constructor(scene: THREE.Scene, physics: PhysicsWorld) {
     this.physics = physics;
 
@@ -42,12 +46,20 @@ export class GolfBall {
     this.lastStablePosition.set(x, y, z);
     this.isSleeping = false;
     this.sleepTimer = 0;
+    this.wasAirborne = false;
+    this.landingEvent = false;
+  }
+
+  setColor(color: number) {
+    (this.mesh.material as THREE.MeshStandardMaterial).color.setHex(color);
   }
 
   applyShot(direction: THREE.Vector3, power: number) {
     this.isSleeping = false;
     this.sleepTimer = 0;
     this.lastStablePosition.copy(this.mesh.position);
+    this.wasAirborne = false;
+    this.landingEvent = false;
 
     const impulse = new CANNON.Vec3(
       direction.x * power,
@@ -73,6 +85,18 @@ export class GolfBall {
     return this.mesh.position.clone();
   }
 
+  isAirborne(): boolean {
+    return this.body.position.y > BALL_RADIUS + 0.2;
+  }
+
+  consumeLandingEvent(): boolean {
+    if (this.landingEvent) {
+      this.landingEvent = false;
+      return true;
+    }
+    return false;
+  }
+
   update(dt: number) {
     // Sync mesh to physics body
     this.mesh.position.set(
@@ -86,6 +110,14 @@ export class GolfBall {
       this.body.quaternion.z,
       this.body.quaternion.w
     );
+
+    // Landing detection
+    const airborne = this.body.position.y > BALL_RADIUS + 0.5;
+    const grounded = this.body.position.y <= BALL_RADIUS + 0.1;
+    if (this.wasAirborne && grounded) {
+      this.landingEvent = true;
+    }
+    this.wasAirborne = airborne;
 
     // Manual sleep detection
     const speed = this.getSpeed();

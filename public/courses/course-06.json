@@ -1,0 +1,65 @@
+{
+  "name": "Lava Links - Hole 6",
+  "par": 4,
+  "theme": "volcanic",
+  "tee": { "x": 0, "z": 35 },
+  "hole": { "x": -6, "z": -30 },
+  "zones": [
+    {
+      "type": "tee",
+      "shape": "rect",
+      "position": { "x": 0, "z": 35 },
+      "size": { "width": 4, "height": 4 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": -1, "z": 12 },
+      "size": { "width": 9, "height": 42 }
+    },
+    {
+      "type": "fairway",
+      "shape": "rect",
+      "position": { "x": -4, "z": -18 },
+      "size": { "width": 10, "height": 20 }
+    },
+    {
+      "type": "green",
+      "shape": "circle",
+      "position": { "x": -6, "z": -30 },
+      "radius": 6
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": 3, "z": -28 },
+      "radius": 3
+    },
+    {
+      "type": "sand",
+      "shape": "circle",
+      "position": { "x": -12, "z": -32 },
+      "radius": 2.5
+    },
+    {
+      "type": "water",
+      "shape": "rect",
+      "position": { "x": 7, "z": 5 },
+      "size": { "width": 4, "height": 20 }
+    },
+    {
+      "type": "water",
+      "shape": "rect",
+      "position": { "x": -8, "z": -10 },
+      "size": { "width": 3, "height": 14 }
+    }
+  ],
+  "obstacles": [
+    { "type": "tree", "position": { "x": 6, "z": 25, "y": 0 } },
+    { "type": "tree", "position": { "x": -7, "z": 20, "y": 0 } },
+    { "type": "rock", "position": { "x": 5, "z": -5, "y": 0 } },
+    { "type": "rock", "position": { "x": -5, "z": 0, "y": 0 } },
+    { "type": "rock", "position": { "x": -10, "z": -25, "y": 0 } },
+    { "type": "tree", "position": { "x": 4, "z": -15, "y": 0 } }
+  ]
+}
