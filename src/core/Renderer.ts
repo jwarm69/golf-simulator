@@ -17,7 +17,7 @@ export class Renderer {
 
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog(0x87ceeb, 80, 200);
+    this.scene.fog = null;
 
     this.camera = new THREE.PerspectiveCamera(
       60,
@@ -86,16 +86,13 @@ export class Renderer {
     this.sunPosition.setFromSphericalCoords(1, phi, theta);
     uniforms['sunPosition'].value.copy(this.sunPosition);
 
-    // Update fog to match horizon color
-    this.scene.fog = new THREE.Fog(0xb0d4e8, 80, 200);
+    // No fog — clear view of the course
 
     return sky;
   }
 
-  setFogColor(color: number) {
-    if (this.scene.fog instanceof THREE.Fog) {
-      this.scene.fog.color.setHex(color);
-    }
+  setFogColor(_color: number) {
+    // Fog disabled — no-op
   }
 
   private setupLighting() {

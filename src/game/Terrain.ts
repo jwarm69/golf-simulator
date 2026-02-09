@@ -229,6 +229,12 @@ export class Terrain {
     for (const obstacle of course.obstacles) {
       this.addObstacle(obstacle, course.theme);
     }
+
+    // Add sponsor sign near the tee
+    this.addSponsorSign(course.tee.x, course.tee.z);
+
+    // Add a fun themed 3D object
+    this.addThemedObject(course);
   }
 
   private addZone(zone: ZoneData) {
@@ -462,6 +468,530 @@ export class Terrain {
     rockBody.position.set(pos.x, 0.4, pos.z);
     this.physics.addBody(rockBody);
     this.bodies.push(rockBody);
+  }
+
+  private addSponsorSign(teeX: number, teeZ: number) {
+    const group = new THREE.Group();
+
+    // Two posts
+    const postGeo = new THREE.CylinderGeometry(0.05, 0.05, 2.2, 8);
+    const postMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.3, metalness: 0.6 });
+    const postL = new THREE.Mesh(postGeo, postMat);
+    postL.position.set(-1.1, 1.1, 0);
+    postL.castShadow = true;
+    group.add(postL);
+    const postR = new THREE.Mesh(postGeo, postMat);
+    postR.position.set(1.1, 1.1, 0);
+    postR.castShadow = true;
+    group.add(postR);
+
+    // Sign board via canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 192;
+    const ctx = canvas.getContext('2d')!;
+
+    // Background
+    ctx.fillStyle = '#1a1a2e';
+    ctx.beginPath();
+    ctx.roundRect(0, 0, 512, 192, 12);
+    ctx.fill();
+
+    // Gold border
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.roundRect(6, 6, 500, 180, 8);
+    ctx.stroke();
+
+    // "This hole is sponsored by" text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '600 30px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('This hole is sponsored by', 256, 60);
+
+    // Blank sponsor area (dashed underline)
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(100, 140);
+    ctx.lineTo(412, 140);
+    ctx.stroke();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const signGeo = new THREE.PlaneGeometry(2.4, 0.9);
+    const signMat = new THREE.MeshStandardMaterial({
+      map: texture,
+      roughness: 0.4,
+      metalness: 0.1,
+    });
+    const sign = new THREE.Mesh(signGeo, signMat);
+    sign.position.y = 1.8;
+    sign.castShadow = true;
+    group.add(sign);
+
+    // Also render the back side
+    const backSign = new THREE.Mesh(signGeo, signMat);
+    backSign.position.y = 1.8;
+    backSign.rotation.y = Math.PI;
+    group.add(backSign);
+
+    // Position the sign to the right of the tee, facing sideways
+    group.position.set(teeX + 4, 0, teeZ);
+    group.rotation.y = Math.PI / 2;
+
+    this.scene.add(group);
+    // Track sub-meshes for cleanup
+    for (const child of group.children) {
+      this.meshes.push(child as THREE.Mesh);
+    }
+  }
+
+  private addThemedObject(course: CourseData) {
+    const theme = course.theme ?? 'meadow';
+    // Place the object roughly midway between tee and hole, offset to the side
+    const midX = (course.tee.x + course.hole.x) / 2;
+    const midZ = (course.tee.z + course.hole.z) / 2;
+    // Offset to the right side so it doesn't block play
+    const ox = midX + 12;
+    const oz = midZ;
+
+    switch (theme) {
+      case 'meadow':
+      default:
+        this.buildWindmill(ox, oz);
+        break;
+      case 'lakeside':
+        this.buildDock(ox, oz);
+        break;
+      case 'forest':
+        this.buildCabin(ox, oz);
+        break;
+      case 'desert':
+        this.buildPyramid(ox, oz);
+        break;
+      case 'arctic':
+        this.buildSnowman(ox, oz);
+        break;
+      case 'volcanic':
+        this.buildVolcano(ox, oz);
+        break;
+      case 'tropical':
+        this.buildTikiStatue(ox, oz);
+        break;
+      case 'canyon':
+        this.buildStoneArch(ox, oz);
+        break;
+      case 'moonscape':
+        this.buildRocket(ox, oz);
+        break;
+    }
+  }
+
+  private addMesh(mesh: THREE.Mesh) {
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    this.scene.add(mesh);
+    this.meshes.push(mesh);
+  }
+
+  private buildWindmill(x: number, z: number) {
+    // Tower
+    const towerGeo = new THREE.CylinderGeometry(0.8, 1.2, 5, 8);
+    const towerMat = new THREE.MeshStandardMaterial({ color: 0xf5f0e0, roughness: 0.9 });
+    const tower = new THREE.Mesh(towerGeo, towerMat);
+    tower.position.set(x, 2.5, z);
+    this.addMesh(tower);
+
+    // Roof (cone)
+    const roofGeo = new THREE.ConeGeometry(1.0, 1.5, 8);
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.8 });
+    const roof = new THREE.Mesh(roofGeo, roofMat);
+    roof.position.set(x, 5.75, z);
+    this.addMesh(roof);
+
+    // Blades (4 flat boxes as vanes)
+    const bladeMat = new THREE.MeshStandardMaterial({ color: 0xdec89a, roughness: 0.7 });
+    for (let i = 0; i < 4; i++) {
+      const bladeGeo = new THREE.BoxGeometry(0.3, 2.5, 0.05);
+      const blade = new THREE.Mesh(bladeGeo, bladeMat);
+      const angle = (i * Math.PI) / 2;
+      blade.position.set(
+        x + Math.cos(angle) * 1.25,
+        4.5 + Math.sin(angle) * 1.25,
+        z - 1.0
+      );
+      blade.rotation.z = angle;
+      this.addMesh(blade);
+    }
+
+    // Door
+    const doorGeo = new THREE.PlaneGeometry(0.6, 1.0);
+    const doorMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 });
+    const door = new THREE.Mesh(doorGeo, doorMat);
+    door.position.set(x, 0.5, z - 1.21);
+    this.addMesh(door);
+  }
+
+  private buildDock(x: number, z: number) {
+    // Wooden planks platform
+    const plankMat = new THREE.MeshStandardMaterial({ color: 0x8b6914, roughness: 0.85 });
+    const deckGeo = new THREE.BoxGeometry(3, 0.15, 5);
+    const deck = new THREE.Mesh(deckGeo, plankMat);
+    deck.position.set(x, 0.4, z);
+    this.addMesh(deck);
+
+    // Support posts
+    const postGeo = new THREE.CylinderGeometry(0.1, 0.1, 1.2, 6);
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x6b4e1e, roughness: 0.9 });
+    const postPositions = [[-1.2, -2], [1.2, -2], [-1.2, 2], [1.2, 2]];
+    for (const [px, pz] of postPositions) {
+      const post = new THREE.Mesh(postGeo, postMat);
+      post.position.set(x + px, 0, z + pz);
+      this.addMesh(post);
+    }
+
+    // Bollard with rope suggestion
+    const bollardGeo = new THREE.CylinderGeometry(0.08, 0.1, 0.6, 8);
+    const bollardMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.5, metalness: 0.3 });
+    const bollard = new THREE.Mesh(bollardGeo, bollardMat);
+    bollard.position.set(x + 1.3, 0.78, z - 2.2);
+    this.addMesh(bollard);
+
+    // Small rowboat next to dock
+    const boatGeo = new THREE.CapsuleGeometry(0.4, 1.8, 4, 8);
+    const boatMat = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.7 });
+    const boat = new THREE.Mesh(boatGeo, boatMat);
+    boat.position.set(x + 2.5, 0.15, z);
+    boat.rotation.z = Math.PI / 2;
+    boat.scale.set(0.7, 0.5, 1);
+    this.addMesh(boat);
+  }
+
+  private buildCabin(x: number, z: number) {
+    // Cabin body
+    const bodyGeo = new THREE.BoxGeometry(3, 2, 3);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x6b3a1e, roughness: 0.9 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.set(x, 1, z);
+    this.addMesh(body);
+
+    // Roof
+    const roofGeo = new THREE.ConeGeometry(2.6, 1.5, 4);
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x4a2a0e, roughness: 0.8 });
+    const roof = new THREE.Mesh(roofGeo, roofMat);
+    roof.position.set(x, 2.75, z);
+    roof.rotation.y = Math.PI / 4;
+    this.addMesh(roof);
+
+    // Door
+    const doorGeo = new THREE.PlaneGeometry(0.7, 1.2);
+    const doorMat = new THREE.MeshStandardMaterial({ color: 0x3a1a0a, roughness: 0.9 });
+    const door = new THREE.Mesh(doorGeo, doorMat);
+    door.position.set(x, 0.6, z - 1.51);
+    this.addMesh(door);
+
+    // Chimney
+    const chimGeo = new THREE.BoxGeometry(0.4, 1.2, 0.4);
+    const chimMat = new THREE.MeshStandardMaterial({ color: 0x808080, roughness: 0.9 });
+    const chimney = new THREE.Mesh(chimGeo, chimMat);
+    chimney.position.set(x + 0.8, 3.1, z + 0.5);
+    this.addMesh(chimney);
+  }
+
+  private buildPyramid(x: number, z: number) {
+    // Main pyramid
+    const pyrGeo = new THREE.ConeGeometry(3, 5, 4);
+    const pyrMat = new THREE.MeshStandardMaterial({ color: 0xdcb060, roughness: 0.8 });
+    const pyramid = new THREE.Mesh(pyrGeo, pyrMat);
+    pyramid.position.set(x, 2.5, z);
+    pyramid.rotation.y = Math.PI / 4;
+    this.addMesh(pyramid);
+
+    // Small secondary pyramid
+    const pyr2Geo = new THREE.ConeGeometry(1.5, 2.5, 4);
+    const pyr2 = new THREE.Mesh(pyr2Geo, pyrMat);
+    pyr2.position.set(x - 4, 1.25, z + 2);
+    pyr2.rotation.y = Math.PI / 4;
+    this.addMesh(pyr2);
+
+    // Entrance (dark rectangle on pyramid face)
+    const entrGeo = new THREE.PlaneGeometry(0.8, 1.2);
+    const entrMat = new THREE.MeshStandardMaterial({ color: 0x1a1008, roughness: 1.0 });
+    const entrance = new THREE.Mesh(entrGeo, entrMat);
+    entrance.position.set(x, 0.6, z - 2.4);
+    entrance.rotation.x = -0.25;
+    this.addMesh(entrance);
+  }
+
+  private buildSnowman(x: number, z: number) {
+    const snowMat = new THREE.MeshStandardMaterial({ color: 0xf8f8ff, roughness: 0.6 });
+
+    // Bottom sphere
+    const botGeo = new THREE.SphereGeometry(1.2, 16, 16);
+    const bottom = new THREE.Mesh(botGeo, snowMat);
+    bottom.position.set(x, 1.2, z);
+    this.addMesh(bottom);
+
+    // Middle sphere
+    const midGeo = new THREE.SphereGeometry(0.9, 16, 16);
+    const middle = new THREE.Mesh(midGeo, snowMat);
+    middle.position.set(x, 3.0, z);
+    this.addMesh(middle);
+
+    // Head
+    const headGeo = new THREE.SphereGeometry(0.6, 16, 16);
+    const head = new THREE.Mesh(headGeo, snowMat);
+    head.position.set(x, 4.2, z);
+    this.addMesh(head);
+
+    // Top hat
+    const brimGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.08, 12);
+    const hatMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.5 });
+    const brim = new THREE.Mesh(brimGeo, hatMat);
+    brim.position.set(x, 4.75, z);
+    this.addMesh(brim);
+
+    const crownGeo = new THREE.CylinderGeometry(0.45, 0.5, 0.7, 12);
+    const crown = new THREE.Mesh(crownGeo, hatMat);
+    crown.position.set(x, 5.15, z);
+    this.addMesh(crown);
+
+    // Carrot nose
+    const noseGeo = new THREE.ConeGeometry(0.1, 0.5, 8);
+    const noseMat = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.7 });
+    const nose = new THREE.Mesh(noseGeo, noseMat);
+    nose.position.set(x, 4.2, z - 0.65);
+    nose.rotation.x = -Math.PI / 2;
+    this.addMesh(nose);
+
+    // Eyes (coal)
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 });
+    const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
+    const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+    eyeL.position.set(x - 0.2, 4.35, z - 0.55);
+    this.addMesh(eyeL);
+    const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+    eyeR.position.set(x + 0.2, 4.35, z - 0.55);
+    this.addMesh(eyeR);
+
+    // Stick arms
+    const armMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 });
+    const armGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6);
+    const armL = new THREE.Mesh(armGeo, armMat);
+    armL.position.set(x - 1.2, 3.2, z);
+    armL.rotation.z = Math.PI / 3;
+    this.addMesh(armL);
+    const armR = new THREE.Mesh(armGeo, armMat);
+    armR.position.set(x + 1.2, 3.2, z);
+    armR.rotation.z = -Math.PI / 3;
+    this.addMesh(armR);
+  }
+
+  private buildVolcano(x: number, z: number) {
+    // Main cone
+    const coneGeo = new THREE.CylinderGeometry(1.0, 4.0, 6, 12);
+    const coneMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.9 });
+    const cone = new THREE.Mesh(coneGeo, coneMat);
+    cone.position.set(x, 3, z);
+    this.addMesh(cone);
+
+    // Crater rim (torus on top)
+    const rimGeo = new THREE.TorusGeometry(1.0, 0.3, 8, 16);
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0a, roughness: 0.8 });
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.position.set(x, 6.0, z);
+    rim.rotation.x = Math.PI / 2;
+    this.addMesh(rim);
+
+    // Lava pool in crater
+    const lavaGeo = new THREE.CircleGeometry(0.8, 16);
+    const lavaMat = new THREE.MeshStandardMaterial({
+      color: 0xff4400,
+      emissive: 0xff2200,
+      emissiveIntensity: 0.8,
+      roughness: 0.3,
+    });
+    const lava = new THREE.Mesh(lavaGeo, lavaMat);
+    lava.position.set(x, 6.05, z);
+    lava.rotation.x = -Math.PI / 2;
+    this.addMesh(lava);
+
+    // Lava streaks down the side
+    for (let i = 0; i < 3; i++) {
+      const angle = (i * Math.PI * 2) / 3 + 0.3;
+      const streakGeo = new THREE.PlaneGeometry(0.3, 3);
+      const streakMat = new THREE.MeshStandardMaterial({
+        color: 0xff3300,
+        emissive: 0xcc2200,
+        emissiveIntensity: 0.5,
+        transparent: true,
+        opacity: 0.7,
+        side: THREE.DoubleSide,
+      });
+      const streak = new THREE.Mesh(streakGeo, streakMat);
+      streak.position.set(
+        x + Math.cos(angle) * 2.0,
+        3.0,
+        z + Math.sin(angle) * 2.0
+      );
+      streak.rotation.y = -angle;
+      streak.rotation.x = 0.4;
+      this.addMesh(streak);
+    }
+  }
+
+  private buildTikiStatue(x: number, z: number) {
+    // Body/post
+    const bodyGeo = new THREE.CylinderGeometry(0.6, 0.7, 3.5, 8);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x8b6914, roughness: 0.9 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.set(x, 1.75, z);
+    this.addMesh(body);
+
+    // Head (wider)
+    const headGeo = new THREE.CylinderGeometry(0.75, 0.6, 1.5, 8);
+    const head = new THREE.Mesh(headGeo, bodyMat);
+    head.position.set(x, 4.25, z);
+    this.addMesh(head);
+
+    // Eyes (glowing green)
+    const eyeMat = new THREE.MeshStandardMaterial({
+      color: 0x00ff66,
+      emissive: 0x00cc44,
+      emissiveIntensity: 0.6,
+    });
+    const eyeGeo = new THREE.SphereGeometry(0.15, 8, 8);
+    const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+    eyeL.position.set(x - 0.3, 4.4, z - 0.65);
+    this.addMesh(eyeL);
+    const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+    eyeR.position.set(x + 0.3, 4.4, z - 0.65);
+    this.addMesh(eyeR);
+
+    // Mouth (dark slit)
+    const mouthGeo = new THREE.BoxGeometry(0.5, 0.15, 0.1);
+    const mouthMat = new THREE.MeshStandardMaterial({ color: 0x1a0a00, roughness: 1.0 });
+    const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+    mouth.position.set(x, 3.9, z - 0.72);
+    this.addMesh(mouth);
+
+    // Top flame bowl
+    const bowlGeo = new THREE.CylinderGeometry(0.5, 0.3, 0.4, 8);
+    const bowlMat = new THREE.MeshStandardMaterial({ color: 0x5a3a0a, roughness: 0.8 });
+    const bowl = new THREE.Mesh(bowlGeo, bowlMat);
+    bowl.position.set(x, 5.2, z);
+    this.addMesh(bowl);
+
+    // Flame
+    const flameGeo = new THREE.ConeGeometry(0.3, 0.8, 8);
+    const flameMat = new THREE.MeshStandardMaterial({
+      color: 0xff6600,
+      emissive: 0xff4400,
+      emissiveIntensity: 1.0,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const flame = new THREE.Mesh(flameGeo, flameMat);
+    flame.position.set(x, 5.8, z);
+    this.addMesh(flame);
+  }
+
+  private buildStoneArch(x: number, z: number) {
+    const archMat = new THREE.MeshStandardMaterial({ color: 0xb05030, roughness: 0.9 });
+
+    // Left pillar
+    const pillarGeo = new THREE.BoxGeometry(1.2, 5, 1.2);
+    const pillarL = new THREE.Mesh(pillarGeo, archMat);
+    pillarL.position.set(x - 2, 2.5, z);
+    this.addMesh(pillarL);
+
+    // Right pillar
+    const pillarR = new THREE.Mesh(pillarGeo, archMat);
+    pillarR.position.set(x + 2, 2.5, z);
+    this.addMesh(pillarR);
+
+    // Arch span (curved using a torus segment)
+    const archGeo = new THREE.TorusGeometry(2.0, 0.6, 8, 16, Math.PI);
+    const arch = new THREE.Mesh(archGeo, archMat);
+    arch.position.set(x, 5.0, z);
+    arch.rotation.z = Math.PI;
+    this.addMesh(arch);
+
+    // Weathered detail rocks at base
+    const debrisMat = new THREE.MeshStandardMaterial({ color: 0x904828, roughness: 0.95 });
+    for (let i = 0; i < 4; i++) {
+      const debrisGeo = new THREE.DodecahedronGeometry(0.3 + Math.random() * 0.2, 0);
+      const debris = new THREE.Mesh(debrisGeo, debrisMat);
+      debris.position.set(
+        x + (Math.random() - 0.5) * 5,
+        0.2,
+        z + (Math.random() - 0.5) * 2
+      );
+      this.addMesh(debris);
+    }
+  }
+
+  private buildRocket(x: number, z: number) {
+    // Rocket body
+    const bodyGeo = new THREE.CylinderGeometry(0.6, 0.7, 5, 12);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.3, metalness: 0.5 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.set(x, 2.5, z);
+    this.addMesh(body);
+
+    // Nose cone
+    const noseGeo = new THREE.ConeGeometry(0.6, 1.5, 12);
+    const noseMat = new THREE.MeshStandardMaterial({ color: 0xcc2222, roughness: 0.3, metalness: 0.4 });
+    const nose = new THREE.Mesh(noseGeo, noseMat);
+    nose.position.set(x, 5.75, z);
+    this.addMesh(nose);
+
+    // Window porthole
+    const winGeo = new THREE.CircleGeometry(0.18, 12);
+    const winMat = new THREE.MeshStandardMaterial({
+      color: 0x88ccff,
+      emissive: 0x4488cc,
+      emissiveIntensity: 0.3,
+      metalness: 0.6,
+    });
+    const window1 = new THREE.Mesh(winGeo, winMat);
+    window1.position.set(x, 4.0, z - 0.71);
+    this.addMesh(window1);
+    const window2 = new THREE.Mesh(winGeo, winMat);
+    window2.position.set(x, 3.2, z - 0.71);
+    this.addMesh(window2);
+
+    // Fins (3 around the base)
+    const finMat = new THREE.MeshStandardMaterial({ color: 0xcc2222, roughness: 0.4, metalness: 0.3 });
+    for (let i = 0; i < 3; i++) {
+      const angle = (i * Math.PI * 2) / 3;
+      const finGeo = new THREE.BoxGeometry(0.1, 1.5, 1.0);
+      const fin = new THREE.Mesh(finGeo, finMat);
+      fin.position.set(
+        x + Math.sin(angle) * 0.8,
+        0.75,
+        z + Math.cos(angle) * 0.8
+      );
+      fin.rotation.y = -angle;
+      this.addMesh(fin);
+    }
+
+    // Exhaust glow at base
+    const exhaustGeo = new THREE.ConeGeometry(0.5, 1.2, 8);
+    const exhaustMat = new THREE.MeshStandardMaterial({
+      color: 0xff8800,
+      emissive: 0xff6600,
+      emissiveIntensity: 0.9,
+      transparent: true,
+      opacity: 0.7,
+    });
+    const exhaust = new THREE.Mesh(exhaustGeo, exhaustMat);
+    exhaust.position.set(x, -0.4, z);
+    exhaust.rotation.x = Math.PI;
+    this.addMesh(exhaust);
   }
 
   getZoneAtPosition(x: number, z: number): ZoneType {

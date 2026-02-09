@@ -1,6 +1,7 @@
 {
   "name": "Lakeside - Hole 2",
   "par": 4,
+  "theme": "lakeside",
   "tee": { "x": 0, "z": 40 },
   "hole": { "x": -5, "z": -35 },
   "zones": [
