@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BALL_MASS } from '../types';
+import { BALL_MASS, MS_TO_MPH } from '../types';
 
 export class WindSystem {
   direction = 0; // radians, 0 = north (+Z direction)
@@ -29,7 +29,7 @@ export class WindSystem {
   }
 
   getSpeedMPH(): number {
-    return Math.round(this.speed * 2.237); // m/s to mph
+    return Math.round(this.speed * MS_TO_MPH);
   }
 
   getDirectionDegrees(): number {

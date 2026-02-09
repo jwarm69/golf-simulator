@@ -1,6 +1,7 @@
 {
   "name": "Pine Valley - Hole 3",
   "par": 5,
+  "theme": "forest",
   "tee": { "x": 0, "z": 50 },
   "hole": { "x": 8, "z": -45 },
   "zones": [

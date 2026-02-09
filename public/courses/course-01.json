@@ -1,6 +1,7 @@
 {
   "name": "The Meadow - Hole 1",
   "par": 3,
+  "theme": "meadow",
   "tee": { "x": 0, "z": 30 },
   "hole": { "x": 2, "z": -25 },
   "zones": [

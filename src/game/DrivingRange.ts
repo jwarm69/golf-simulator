@@ -90,9 +90,6 @@ export class DrivingRange {
 
     // Back net at the far end
     this.addBackNet();
-
-    // Canopy/shelter behind the tee
-    this.addShelter();
   }
 
   private addDistanceMarker(distance: number) {
@@ -130,29 +127,29 @@ export class DrivingRange {
     post.castShadow = true;
     group.add(post);
 
-    // Sign board
+    // Sign board (doubled resolution)
     const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 64;
+    canvas.width = 256;
+    canvas.height = 128;
     const ctx = canvas.getContext('2d')!;
 
     // Background
     ctx.fillStyle = '#1a1a2e';
-    ctx.roundRect(0, 0, 128, 64, 8);
+    ctx.roundRect(0, 0, 256, 128, 16);
     ctx.fill();
 
     // Border
     ctx.strokeStyle = '#ffd700';
-    ctx.lineWidth = 3;
-    ctx.roundRect(2, 2, 124, 60, 6);
+    ctx.lineWidth = 6;
+    ctx.roundRect(4, 4, 248, 120, 12);
     ctx.stroke();
 
     // Distance text
     ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 32px Arial, sans-serif';
+    ctx.font = 'bold 64px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${distance}m`, 64, 34);
+    ctx.fillText(`${distance}m`, 128, 68);
 
     const texture = new THREE.CanvasTexture(canvas);
     const signGeo = new THREE.PlaneGeometry(1.2, 0.6);
@@ -247,19 +244,19 @@ export class DrivingRange {
     this.scene.add(flag);
     this.meshes.push(flag);
 
-    // Distance label on ground
+    // Distance label on ground (doubled resolution)
     const labelCanvas = document.createElement('canvas');
-    labelCanvas.width = 128;
-    labelCanvas.height = 48;
+    labelCanvas.width = 256;
+    labelCanvas.height = 96;
     const lctx = labelCanvas.getContext('2d')!;
     lctx.fillStyle = 'rgba(0,0,0,0.4)';
-    lctx.roundRect(0, 0, 128, 48, 8);
+    lctx.roundRect(0, 0, 256, 96, 16);
     lctx.fill();
     lctx.fillStyle = '#ffffff';
-    lctx.font = 'bold 24px Arial, sans-serif';
+    lctx.font = 'bold 48px Arial, sans-serif';
     lctx.textAlign = 'center';
     lctx.textBaseline = 'middle';
-    lctx.fillText(`${distance}m`, 64, 26);
+    lctx.fillText(`${distance}m`, 128, 52);
 
     const labelTexture = new THREE.CanvasTexture(labelCanvas);
     const labelGeo = new THREE.PlaneGeometry(2, 0.75);
@@ -347,43 +344,6 @@ export class DrivingRange {
     wallBody.position.set(0, 6, -290);
     this.physics.addBody(wallBody);
     this.bodies.push(wallBody);
-  }
-
-  private addShelter() {
-    // Roof
-    const roofGeo = new THREE.BoxGeometry(12, 0.15, 6);
-    const roofMat = new THREE.MeshStandardMaterial({ color: 0x8B7355, roughness: 0.7 });
-    const roof = new THREE.Mesh(roofGeo, roofMat);
-    roof.position.set(0, 3.5, 5);
-    roof.castShadow = true;
-    roof.receiveShadow = true;
-    this.scene.add(roof);
-    this.meshes.push(roof);
-
-    // Support pillars
-    const pillarPositions = [
-      { x: -5.5, z: 2.5 }, { x: 5.5, z: 2.5 },
-      { x: -5.5, z: 7.5 }, { x: 5.5, z: 7.5 },
-    ];
-    for (const p of pillarPositions) {
-      const pillarGeo = new THREE.CylinderGeometry(0.1, 0.1, 3.5, 8);
-      const pillarMat = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.5, metalness: 0.3 });
-      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-      pillar.position.set(p.x, 1.75, p.z);
-      pillar.castShadow = true;
-      this.scene.add(pillar);
-      this.meshes.push(pillar);
-    }
-
-    // Floor mat under shelter
-    const floorGeo = new THREE.PlaneGeometry(11, 5);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.6 });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(0, 0.005, 5);
-    floor.receiveShadow = true;
-    this.scene.add(floor);
-    this.meshes.push(floor);
   }
 
   getDistanceFromTee(x: number, z: number): number {

@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { BALL_MASS } from '../types';
+import { BALL_MASS, GRAVITY } from '../types';
 
 const ARC_POINTS = 60;
-const GRAVITY = new THREE.Vector3(0, -9.82, 0);
+const GRAVITY_VEC = new THREE.Vector3(0, -GRAVITY, 0);
 const DEFAULT_POWER_PREVIEW = 0.5;
 const SIM_DT = 0.02; // 50 steps per second
 const MAX_SIM_TIME = 8.0; // max 8 seconds of flight
@@ -99,7 +99,7 @@ export class TrajectoryPreview {
 
     for (let step = 0; step < totalSteps && pointIndex < ARC_POINTS; step++) {
       // Compute acceleration: gravity + wind + magnus
-      const accel = GRAVITY.clone();
+      const accel = GRAVITY_VEC.clone();
 
       // Wind (only when airborne)
       if (position.y > 0.3) {

@@ -13,7 +13,7 @@ body {
 #game-canvas {
   display: block;
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
 }
 
 #hud {
@@ -23,12 +23,19 @@ body {
   width: 100%;
   height: 100%;
   pointer-events: none;
+  /* Safe area insets for notched devices */
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
 }
 
+/* ---- Top HUD info ---- */
 .hud-top-left {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  left: calc(16px + env(safe-area-inset-left, 0px));
   color: #fff;
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
 }
@@ -46,8 +53,8 @@ body {
 
 .hud-top-right {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  right: calc(16px + env(safe-area-inset-right, 0px));
   color: #fff;
   text-align: right;
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
@@ -65,7 +72,7 @@ body {
 
 /* Wind indicator */
 .wind-indicator {
-  margin-top: 12px;
+  margin-top: 10px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -84,7 +91,7 @@ body {
   opacity: 0.9;
 }
 
-/* Spin indicator */
+/* ---- Spin controls ---- */
 .spin-indicator {
   position: absolute;
   bottom: 160px;
@@ -131,7 +138,7 @@ body {
 /* Turn banner */
 .turn-banner {
   position: absolute;
-  top: 60px;
+  top: calc(60px + env(safe-area-inset-top, 0px));
   left: 50%;
   transform: translateX(-50%);
   color: #fff;
@@ -151,9 +158,10 @@ body {
   opacity: 1;
 }
 
+/* ---- Power meter ---- */
 .power-meter-container {
   position: absolute;
-  bottom: 40px;
+  bottom: calc(36px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   width: 300px;
@@ -179,7 +187,7 @@ body {
 
 .power-meter-label {
   position: absolute;
-  bottom: 68px;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   color: #fff;
@@ -187,12 +195,14 @@ body {
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
   opacity: 0;
   transition: opacity 0.2s;
+  white-space: nowrap;
 }
 
 .power-meter-label.visible {
   opacity: 1;
 }
 
+/* ---- Center message ---- */
 .center-message {
   position: absolute;
   top: 50%;
@@ -205,6 +215,7 @@ body {
   opacity: 0;
   transition: opacity 0.5s;
   text-align: center;
+  max-width: 90vw;
 }
 
 .center-message.visible {
@@ -218,9 +229,10 @@ body {
   opacity: 0.8;
 }
 
+/* ---- Aim hint ---- */
 .aim-hint {
   position: absolute;
-  bottom: 100px;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   color: rgba(255, 255, 255, 0.7);
@@ -229,10 +241,10 @@ body {
   white-space: nowrap;
 }
 
-/* Club row — always visible */
+/* ---- Club row ---- */
 .club-row {
   position: absolute;
-  bottom: 130px;
+  bottom: calc(124px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -251,13 +263,12 @@ body {
   white-space: nowrap;
 }
 
-/* Club buttons visible on ALL devices */
 .club-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.4);
@@ -278,10 +289,10 @@ body {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Sponsor bar */
+/* ---- Sponsor bar ---- */
 .sponsor-bar {
   position: absolute;
-  bottom: 8px;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   color: rgba(255, 255, 255, 0.5);
@@ -294,7 +305,7 @@ body {
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* Scorecard */
+/* ---- Scorecard ---- */
 .scorecard {
   font-size: 12px;
   margin-top: 8px;
@@ -329,11 +340,11 @@ body {
   opacity: 0.6;
 }
 
-/* Minimap */
+/* ---- Minimap ---- */
 .minimap-canvas {
   position: fixed;
-  bottom: 16px;
-  left: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: calc(16px + env(safe-area-inset-left, 0px));
   width: 180px;
   height: 180px;
   border-radius: 8px;
@@ -359,13 +370,16 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 24px;
+  justify-content: flex-start;
+  gap: 20px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s;
   overflow-y: auto;
-  padding: 20px;
+  -webkit-overflow-scrolling: touch;
+  padding: 40px 16px;
+  padding-top: calc(40px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
 }
 
 .hole-select-overlay.visible {
@@ -375,31 +389,35 @@ body {
 
 .hole-select-title {
   color: #fff;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: bold;
   text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+  flex-shrink: 0;
 }
 
 .hole-select-grid {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
   justify-content: center;
   max-width: 800px;
+  width: 100%;
 }
 
 .hole-card {
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 12px;
-  padding: 20px 28px;
+  padding: 16px 20px;
   color: #fff;
   cursor: pointer;
   text-align: center;
   transition: background 0.2s, border-color 0.2s, transform 0.15s;
   pointer-events: auto;
   touch-action: manipulation;
-  min-width: 160px;
+  min-width: 120px;
+  flex: 1 1 120px;
+  max-width: 180px;
 }
 
 .hole-card:hover {
@@ -414,22 +432,24 @@ body {
 }
 
 .hole-card-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: bold;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .hole-card-par {
-  font-size: 14px;
+  font-size: 13px;
   opacity: 0.7;
 }
 
-/* Multiplayer setup */
+/* ---- Multiplayer setup ---- */
 .mp-setup {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  width: 100%;
+  max-width: 320px;
 }
 
 .mp-label {
@@ -446,16 +466,18 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
 }
 
 .mp-name-input {
-  padding: 8px 16px;
+  padding: 10px 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
-  font-size: 14px;
-  width: 200px;
+  font-size: 16px;
+  width: 100%;
+  max-width: 240px;
   text-align: center;
   pointer-events: auto;
 }
@@ -465,11 +487,13 @@ body {
   border-color: rgba(255, 255, 255, 0.6);
 }
 
-/* Round summary */
+/* ---- Round summary ---- */
 .round-summary {
   color: #fff;
-  max-width: 500px;
+  max-width: 90vw;
   text-align: center;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .summary-table {
@@ -480,9 +504,10 @@ body {
 
 .summary-table th,
 .summary-table td {
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   text-align: center;
+  white-space: nowrap;
 }
 
 .summary-table th {
@@ -496,7 +521,7 @@ body {
 }
 
 .winner-text {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: bold;
   margin-top: 16px;
   text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
@@ -508,7 +533,7 @@ body {
   opacity: 0.7;
 }
 
-/* Pause menu */
+/* ---- Pause menu ---- */
 .pause-overlay {
   position: absolute;
   top: 0;
@@ -523,6 +548,7 @@ body {
   pointer-events: none;
   transition: opacity 0.25s;
   z-index: 20;
+  padding: 20px;
 }
 
 .pause-overlay.visible {
@@ -535,12 +561,13 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  min-width: 240px;
+  width: 100%;
+  max-width: 280px;
 }
 
 .pause-title {
   color: #fff;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: bold;
   text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
   margin-bottom: 8px;
@@ -548,8 +575,9 @@ body {
 }
 
 .pause-btn {
-  width: 200px;
-  padding: 12px 0;
+  width: 100%;
+  max-width: 220px;
+  padding: 14px 0;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.1);
@@ -586,14 +614,14 @@ body {
   font-size: 13px;
 }
 
-/* Mobile menu button */
+/* ---- Mobile menu button ---- */
 .menu-toggle-btn {
   display: none;
   position: absolute;
-  top: 16px;
-  right: 70px;
-  width: 40px;
-  height: 40px;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: calc(60px + env(safe-area-inset-right, 0px));
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.4);
@@ -605,18 +633,10 @@ body {
   z-index: 5;
 }
 
-@media (pointer: coarse) {
-  .menu-toggle-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-}
-
-/* Auto-club hint */
+/* ---- Auto-club hint ---- */
 .auto-club-hint {
   position: absolute;
-  top: 100px;
+  top: calc(100px + env(safe-area-inset-top, 0px));
   left: 50%;
   transform: translateX(-50%);
   color: #6ec85e;
@@ -635,10 +655,10 @@ body {
   opacity: 1;
 }
 
-/* Score panel */
+/* ---- Score panel ---- */
 .score-panel {
   position: absolute;
-  top: 20px;
+  top: calc(16px + env(safe-area-inset-top, 0px));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -669,11 +689,11 @@ body {
   padding-left: 16px;
 }
 
-/* Range HUD */
+/* ---- Range HUD ---- */
 .range-hud {
   position: absolute;
-  top: 60px;
-  right: 20px;
+  top: calc(56px + env(safe-area-inset-top, 0px));
+  right: calc(16px + env(safe-area-inset-right, 0px));
   color: #fff;
   font-size: 13px;
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
@@ -700,7 +720,7 @@ body {
   font-weight: bold;
 }
 
-/* Crosshair */
+/* ---- Crosshair ---- */
 .crosshair {
   position: absolute;
   top: 50%;
@@ -737,16 +757,37 @@ body {
   transform: translateY(-50%);
 }
 
-/* Mobile tweaks */
+/* ============================================
+   TOUCH DEVICE OVERRIDES
+   ============================================ */
 @media (pointer: coarse) {
+  .menu-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Hide desktop aim hint — mobile gets its own shorter version */
   .aim-hint {
-    display: none;
+    font-size: 12px;
+    white-space: normal;
+    text-align: center;
+    max-width: 70vw;
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
   }
 
+  /* Power meter: fluid width */
   .power-meter-container {
-    width: 60vw;
+    width: min(60vw, 300px);
+    bottom: calc(32px + env(safe-area-inset-bottom, 0px));
   }
 
+  .power-meter-label {
+    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    font-size: 13px;
+  }
+
+  /* Club buttons: proper touch targets */
   .club-btn {
     width: 48px;
     height: 48px;
@@ -754,16 +795,18 @@ body {
   }
 
   .club-row {
-    bottom: 185px;
+    bottom: calc(148px + env(safe-area-inset-bottom, 0px));
   }
 
+  /* Spin: compact positioning */
   .spin-indicator {
-    bottom: 250px;
+    bottom: calc(214px + env(safe-area-inset-bottom, 0px));
+    font-size: 14px;
   }
 
   .spin-controls {
     position: absolute;
-    bottom: 205px;
+    bottom: calc(186px + env(safe-area-inset-bottom, 0px));
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -771,24 +814,283 @@ body {
   }
 
   .spin-btn {
-    padding: 12px 16px;
+    padding: 12px 18px;
+    font-size: 14px;
+    min-width: 70px;
+  }
+
+  /* Shot button: large, easy-to-reach touch target */
+  .shot-hold-btn {
+    position: absolute;
+    right: calc(14px + env(safe-area-inset-right, 0px));
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+    display: block;
+    padding: 16px 20px;
+    font-size: 14px;
+    border-radius: 16px;
+    background: rgba(255, 196, 0, 0.25);
+    border: 2px solid rgba(255, 196, 0, 0.4);
+  }
+
+  .shot-hold-btn:active {
+    background: rgba(255, 196, 0, 0.45);
+    border-color: rgba(255, 196, 0, 0.7);
+  }
+
+  /* Hole cards: fluid sizing */
+  .hole-card {
+    min-width: 100px;
+    flex: 1 1 100px;
+    padding: 14px 16px;
+  }
+
+  .hole-card-name {
+    font-size: 14px;
+  }
+
+  .hole-card-par {
+    font-size: 12px;
+  }
+
+  /* Minimap: smaller on touch */
+  .minimap-canvas {
+    width: 120px;
+    height: 120px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    left: calc(12px + env(safe-area-inset-left, 0px));
+  }
+
+  /* Scorecard: readable on mobile */
+  .scorecard {
+    font-size: 11px;
+    max-width: 50vw;
+  }
+
+  .mp-scorecard {
+    font-size: 12px;
+  }
+
+  .mp-scorecard th,
+  .mp-scorecard td {
+    padding: 3px 6px;
+  }
+
+  /* Summary table scrollable */
+  .round-summary {
+    max-width: 85vw;
+  }
+
+  .summary-table th,
+  .summary-table td {
+    padding: 6px 8px;
     font-size: 13px;
   }
 
-  .shot-hold-btn {
-    position: absolute;
-    right: 14px;
-    bottom: 96px;
-    display: block;
+  /* Center message responsive */
+  .center-message {
+    font-size: 28px;
+    max-width: 85vw;
+  }
+
+  .center-message .sub {
+    font-size: 15px;
+  }
+
+  /* Sponsor bar with safe area */
+  .sponsor-bar {
+    bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+    font-size: 10px;
+  }
+
+  /* Turn banner */
+  .turn-banner {
+    font-size: 18px;
+    padding: 6px 18px;
+  }
+
+  /* Pause menu mobile adjustments */
+  .pause-title {
+    font-size: 24px;
+    letter-spacing: 3px;
+  }
+}
+
+/* ============================================
+   SMALL SCREEN WIDTH (narrow phones)
+   ============================================ */
+@media (max-width: 400px) {
+  .hud-top-left .hole-name {
+    font-size: 15px;
+  }
+
+  .hud-top-left .shot-info {
+    font-size: 12px;
+  }
+
+  .hud-top-right .distance {
+    font-size: 20px;
+  }
+
+  .club-display {
+    font-size: 14px;
+    padding: 5px 12px;
+  }
+
+  .hole-select-title {
+    font-size: 22px;
   }
 
   .hole-card {
-    padding: 16px 20px;
-    min-width: 140px;
+    min-width: 80px;
+    padding: 12px 10px;
+  }
+
+  .hole-card-name {
+    font-size: 13px;
+  }
+
+  .score-panel {
+    font-size: 11px;
+    gap: 10px;
+    padding: 4px 10px;
+  }
+
+  .range-hud {
+    font-size: 11px;
+  }
+}
+
+/* ============================================
+   SHORT SCREENS (landscape phones)
+   ============================================ */
+@media (max-height: 500px) {
+  /* Compact everything vertically */
+  .spin-indicator {
+    bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+    font-size: 11px;
+  }
+
+  .spin-controls {
+    bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .spin-btn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+
+  .club-row {
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .club-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .club-display {
+    font-size: 13px;
+    padding: 4px 10px;
+  }
+
+  .power-meter-container {
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    height: 16px;
+  }
+
+  .power-meter-label {
+    bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    font-size: 11px;
+  }
+
+  .aim-hint {
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    font-size: 11px;
+  }
+
+  .shot-hold-btn {
+    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 14px;
+    font-size: 12px;
   }
 
   .minimap-canvas {
-    width: 140px;
-    height: 140px;
+    width: 100px;
+    height: 100px;
+  }
+
+  .center-message {
+    font-size: 24px;
+  }
+
+  .center-message .sub {
+    font-size: 13px;
+  }
+
+  .sponsor-bar {
+    display: none;
+  }
+
+  /* Hole select: tighter in landscape */
+  .hole-select-overlay {
+    padding: 20px 12px;
+    gap: 12px;
+  }
+
+  .hole-select-title {
+    font-size: 20px;
+  }
+
+  .hole-card {
+    padding: 10px 12px;
+    min-width: 80px;
+  }
+
+  .hole-card-name {
+    font-size: 13px;
+  }
+
+  .hole-card-par {
+    font-size: 11px;
+  }
+
+  .pause-title {
+    font-size: 22px;
+  }
+
+  .pause-btn {
+    padding: 10px 0;
+    font-size: 14px;
+  }
+
+  .pause-controls {
+    font-size: 11px;
+    margin-top: 8px;
+  }
+}
+
+/* ============================================
+   MEDIUM SCREENS (landscape + touch combined)
+   ============================================ */
+@media (max-height: 500px) and (pointer: coarse) {
+  .hud-top-left .hole-name {
+    font-size: 14px;
+  }
+
+  .hud-top-left .shot-info {
+    font-size: 11px;
+  }
+
+  .hud-top-right .distance {
+    font-size: 18px;
+  }
+
+  .wind-arrow {
+    font-size: 18px;
+  }
+
+  .wind-speed {
+    font-size: 12px;
   }
 }
