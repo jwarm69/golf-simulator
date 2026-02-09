@@ -37,9 +37,9 @@ export class InputActions {
       case 'ChargeEnd':
         return this.input.consumeSpaceRelease();
       case 'ClubPrev':
-        return this.input.consumeKeyPress('q');
+        return this.input.consumeKeyPress('q') || this.input.consumeKeyPress('arrowup');
       case 'ClubNext':
-        return this.input.consumeKeyPress('e');
+        return this.input.consumeKeyPress('e') || this.input.consumeKeyPress('arrowdown');
       case 'MenuToggle':
         return this.input.consumeKeyPress('escape');
       case 'Confirm':
@@ -73,8 +73,8 @@ export class InputActions {
       case 'AimX': {
         // Keyboard + right-drag + touch-drag all contribute
         let val = 0;
-        if (this.input.keys.has('a') || this.input.keys.has('arrowleft')) val -= 0.03;
-        if (this.input.keys.has('d') || this.input.keys.has('arrowright')) val += 0.03;
+        if (this.input.keys.has('d') || this.input.keys.has('arrowleft')) val -= 0.03;
+        if (this.input.keys.has('a') || this.input.keys.has('arrowright')) val += 0.03;
         const drag = this.input.consumeRightDragDelta();
         val += drag.x * 0.005;
         val += this.input.consumeTouchDragDeltaX() * 0.005;

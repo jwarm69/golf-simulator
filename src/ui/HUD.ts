@@ -230,7 +230,7 @@ export class HUD {
     if (isTouch) {
       this.aimHint.innerHTML = 'Swipe to aim &nbsp;|&nbsp; \u25C0 \u25B6 club &nbsp;|&nbsp; DRAW/FADE spin';
     } else {
-      this.aimHint.innerHTML = 'A/D or Drag to aim &nbsp;|&nbsp; Q/E or <b>\u25C0 \u25B6</b> change club &nbsp;|&nbsp; Z/C spin &nbsp;|&nbsp; SPACE or Hold to shoot &nbsp;|&nbsp; Scroll to adjust view';
+      this.aimHint.innerHTML = 'D/A or Drag to aim &nbsp;|&nbsp; Q/E or \u2191\u2193 change club &nbsp;|&nbsp; Z/C spin &nbsp;|&nbsp; SPACE or Hold to shoot &nbsp;|&nbsp; Scroll to adjust view';
     }
     this.container.appendChild(this.aimHint);
 

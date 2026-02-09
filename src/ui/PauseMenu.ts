@@ -60,8 +60,8 @@ export class PauseMenu {
     } else {
       controls.innerHTML = [
         '<strong>Controls</strong>',
-        'A/D or Drag \u2014 Aim',
-        'Q/E \u2014 Change Club',
+        'D/A or Drag \u2014 Aim (D=Left, A=Right)',
+        'Q/E or \u2191\u2193 \u2014 Change Club',
         'Z/C \u2014 Spin',
         'SPACE \u2014 Charge & Shoot',
         'Scroll \u2014 Adjust View',
