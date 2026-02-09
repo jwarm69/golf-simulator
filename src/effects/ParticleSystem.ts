@@ -1,7 +1,7 @@
 import * as THREE from 'three';
+import { GRAVITY } from '../types';
 
 const MAX_PARTICLES = 500;
-const GRAVITY = -9.82;
 
 interface Particle {
   alive: boolean;
@@ -126,7 +126,7 @@ export class ParticleSystem {
 
       // Apply gravity if enabled
       if (p.gravity) {
-        p.vy += GRAVITY * dt * 0.3;
+        p.vy += -GRAVITY * dt * 0.3;
       }
 
       // Update position

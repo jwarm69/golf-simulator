@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { PhysicsWorld } from '../core/PhysicsWorld';
-import { BALL_RADIUS, BALL_MASS, SLEEP_SPEED_THRESHOLD, SLEEP_TIME_THRESHOLD } from '../types';
+import { BALL_RADIUS, BALL_MASS, GRAVITY, SLEEP_SPEED_THRESHOLD, SLEEP_TIME_THRESHOLD } from '../types';
 
 /** Generate a simple procedural environment cube map for reflections */
 function createEnvMap(): THREE.CubeTexture {
@@ -52,6 +52,10 @@ export class GolfBall {
   private sleepTimer = 0;
   isSleeping = false;
   lastStablePosition = new THREE.Vector3();
+
+  // Cached vectors to avoid per-frame allocations
+  private _cachedPosition = new THREE.Vector3();
+  private _cachedVelocity = new THREE.Vector3();
 
   // Landing detection
   private wasAirborne = false;
@@ -123,7 +127,7 @@ export class GolfBall {
   }
 
   getVelocity(): THREE.Vector3 {
-    return new THREE.Vector3(
+    return this._cachedVelocity.set(
       this.body.velocity.x,
       this.body.velocity.y,
       this.body.velocity.z
@@ -131,7 +135,7 @@ export class GolfBall {
   }
 
   getPosition(): THREE.Vector3 {
-    return this.mesh.position.clone();
+    return this._cachedPosition.copy(this.mesh.position);
   }
 
   isAirborne(): boolean {
@@ -205,7 +209,7 @@ export class GolfBall {
     if (horizontalSpeed < 0.001) return;
 
     // Constant deceleration = Crr * g (real rolling resistance model)
-    const decel = coefficient * 9.82;
+    const decel = coefficient * GRAVITY;
     const speedReduction = decel * dt;
 
     if (speedReduction >= horizontalSpeed) {

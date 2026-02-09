@@ -122,13 +122,8 @@ export const DEFAULT_CLUB_INDEX = 3; // 7 Iron
 
 export const AUTO_PUTTER_DISTANCE = 30;
 
-export interface LeaderboardEntry {
-  playerName: string;
-  totalStrokes: number;
-  totalPar: number;
-  date: string;
-  holesPlayed: number;
-}
+export const GRAVITY = 9.82;
+export const MS_TO_MPH = 2.237;
 
 export const BALL_RADIUS = 0.15;
 export const BALL_MASS = 0.046;

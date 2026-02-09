@@ -1,5 +1,5 @@
 import * as CANNON from 'cannon-es';
-import { ZONE_PHYSICS, ZoneType } from '../types';
+import { ZONE_PHYSICS, ZoneType, GRAVITY } from '../types';
 
 export class PhysicsWorld {
   world: CANNON.World;
@@ -9,7 +9,7 @@ export class PhysicsWorld {
 
   constructor() {
     this.world = new CANNON.World();
-    this.world.gravity.set(0, -9.82, 0);
+    this.world.gravity.set(0, -GRAVITY, 0);
     this.world.broadphase = new CANNON.SAPBroadphase(this.world);
     this.world.allowSleep = true;
 

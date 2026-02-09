@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { PhysicsWorld } from '../core/PhysicsWorld';
-import { CourseData, ZoneData, ObstacleData, ZoneType, ZONE_COLORS, BALL_RADIUS } from '../types';
+import { CourseData, ZoneData, ObstacleData, ZoneType, ZONE_COLORS } from '../types';
 
 interface ZoneBounds {
   type: ZoneType;

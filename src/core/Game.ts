@@ -27,8 +27,9 @@ import { PauseMenu } from '../ui/PauseMenu';
 import { Minimap } from '../ui/Minimap';
 import {
   GameState, CourseData, BALL_RADIUS, ZONE_PHYSICS, CLUBS, DEFAULT_CLUB_INDEX, ClubData,
-  ThemeName, THEME_COLORS, ZONE_COLORS, AUTO_PUTTER_DISTANCE,
+  ThemeName, THEME_COLORS, ZONE_COLORS, AUTO_PUTTER_DISTANCE, GRAVITY,
 } from '../types';
+import { clubMaxDistance } from '../utils/math';
 
 const HOLES: HoleOption[] = [
   { path: '/courses/course-01.json', name: 'The Meadow - Hole 1', par: 3 },
@@ -455,11 +456,7 @@ export class Game {
     this.clubIndex = ((this.clubIndex + delta) % CLUBS.length + CLUBS.length) % CLUBS.length;
     this.currentClub = CLUBS[this.clubIndex];
     this.shotController.setClub(this.currentClub);
-    const g = 9.82;
-    const maxDist = Math.round(
-      (this.currentClub.maxSpeed ** 2 * Math.sin(2 * this.currentClub.loftAngle)) / g
-    );
-    this.hud.setClub(this.currentClub.name, maxDist);
+    this.hud.setClub(this.currentClub.name, clubMaxDistance(this.currentClub.maxSpeed, this.currentClub.loftAngle, GRAVITY));
   }
 
   private updateAiming(dt: number) {
@@ -672,11 +669,7 @@ export class Game {
       this.clubIndex = PUTTER_INDEX;
       this.currentClub = CLUBS[PUTTER_INDEX];
       this.shotController.setClub(this.currentClub);
-      const g = 9.82;
-      const maxDist = Math.round(
-        (this.currentClub.maxSpeed ** 2 * Math.sin(2 * this.currentClub.loftAngle)) / g
-      );
-      this.hud.setClub(this.currentClub.name, maxDist);
+      this.hud.setClub(this.currentClub.name, clubMaxDistance(this.currentClub.maxSpeed, this.currentClub.loftAngle, GRAVITY));
       this.hud.showAutoClubHint(this.currentClub.name);
     }
   }

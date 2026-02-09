@@ -61,8 +61,11 @@ export class PuttingGuide {
 
   dispose() {
     this.scene.remove(this.group);
+    // Geometry is shared across all dots — dispose once
+    if (this.dots.length > 0) {
+      this.dots[0].geometry.dispose();
+    }
     for (const dot of this.dots) {
-      dot.geometry.dispose();
       (dot.material as THREE.Material).dispose();
     }
   }
