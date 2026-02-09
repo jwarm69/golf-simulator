@@ -90,9 +90,6 @@ export class DrivingRange {
 
     // Back net at the far end
     this.addBackNet();
-
-    // Canopy/shelter behind the tee
-    this.addShelter();
   }
 
   private addDistanceMarker(distance: number) {
@@ -347,43 +344,6 @@ export class DrivingRange {
     wallBody.position.set(0, 6, -290);
     this.physics.addBody(wallBody);
     this.bodies.push(wallBody);
-  }
-
-  private addShelter() {
-    // Roof
-    const roofGeo = new THREE.BoxGeometry(12, 0.15, 6);
-    const roofMat = new THREE.MeshStandardMaterial({ color: 0x8B7355, roughness: 0.7 });
-    const roof = new THREE.Mesh(roofGeo, roofMat);
-    roof.position.set(0, 3.5, 5);
-    roof.castShadow = true;
-    roof.receiveShadow = true;
-    this.scene.add(roof);
-    this.meshes.push(roof);
-
-    // Support pillars
-    const pillarPositions = [
-      { x: -5.5, z: 2.5 }, { x: 5.5, z: 2.5 },
-      { x: -5.5, z: 7.5 }, { x: 5.5, z: 7.5 },
-    ];
-    for (const p of pillarPositions) {
-      const pillarGeo = new THREE.CylinderGeometry(0.1, 0.1, 3.5, 8);
-      const pillarMat = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.5, metalness: 0.3 });
-      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-      pillar.position.set(p.x, 1.75, p.z);
-      pillar.castShadow = true;
-      this.scene.add(pillar);
-      this.meshes.push(pillar);
-    }
-
-    // Floor mat under shelter
-    const floorGeo = new THREE.PlaneGeometry(11, 5);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.6 });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(0, 0.005, 5);
-    floor.receiveShadow = true;
-    this.scene.add(floor);
-    this.meshes.push(floor);
   }
 
   getDistanceFromTee(x: number, z: number): number {
