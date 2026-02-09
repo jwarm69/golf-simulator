@@ -130,29 +130,29 @@ export class DrivingRange {
     post.castShadow = true;
     group.add(post);
 
-    // Sign board
+    // Sign board (doubled resolution)
     const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 64;
+    canvas.width = 256;
+    canvas.height = 128;
     const ctx = canvas.getContext('2d')!;
 
     // Background
     ctx.fillStyle = '#1a1a2e';
-    ctx.roundRect(0, 0, 128, 64, 8);
+    ctx.roundRect(0, 0, 256, 128, 16);
     ctx.fill();
 
     // Border
     ctx.strokeStyle = '#ffd700';
-    ctx.lineWidth = 3;
-    ctx.roundRect(2, 2, 124, 60, 6);
+    ctx.lineWidth = 6;
+    ctx.roundRect(4, 4, 248, 120, 12);
     ctx.stroke();
 
     // Distance text
     ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 32px Arial, sans-serif';
+    ctx.font = 'bold 64px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${distance}m`, 64, 34);
+    ctx.fillText(`${distance}m`, 128, 68);
 
     const texture = new THREE.CanvasTexture(canvas);
     const signGeo = new THREE.PlaneGeometry(1.2, 0.6);
@@ -247,19 +247,19 @@ export class DrivingRange {
     this.scene.add(flag);
     this.meshes.push(flag);
 
-    // Distance label on ground
+    // Distance label on ground (doubled resolution)
     const labelCanvas = document.createElement('canvas');
-    labelCanvas.width = 128;
-    labelCanvas.height = 48;
+    labelCanvas.width = 256;
+    labelCanvas.height = 96;
     const lctx = labelCanvas.getContext('2d')!;
     lctx.fillStyle = 'rgba(0,0,0,0.4)';
-    lctx.roundRect(0, 0, 128, 48, 8);
+    lctx.roundRect(0, 0, 256, 96, 16);
     lctx.fill();
     lctx.fillStyle = '#ffffff';
-    lctx.font = 'bold 24px Arial, sans-serif';
+    lctx.font = 'bold 48px Arial, sans-serif';
     lctx.textAlign = 'center';
     lctx.textBaseline = 'middle';
-    lctx.fillText(`${distance}m`, 64, 26);
+    lctx.fillText(`${distance}m`, 128, 52);
 
     const labelTexture = new THREE.CanvasTexture(labelCanvas);
     const labelGeo = new THREE.PlaneGeometry(2, 0.75);

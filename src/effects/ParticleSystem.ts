@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
-const MAX_PARTICLES = 200;
+const MAX_PARTICLES = 500;
+const GRAVITY = -9.82;
 
 interface Particle {
   alive: boolean;
@@ -14,6 +15,8 @@ interface Particle {
   vz: number;
   alpha: number;
   size: number;
+  startSize: number;
+  gravity: boolean;
 }
 
 export class ParticleSystem {
@@ -33,6 +36,8 @@ export class ParticleSystem {
         vx: 0, vy: 0, vz: 0,
         alpha: 0,
         size: 0.08,
+        startSize: 0.08,
+        gravity: false,
       });
     }
 
@@ -51,11 +56,12 @@ export class ParticleSystem {
 
     const mat = new THREE.PointsMaterial({
       color,
-      size: 0.08,
+      size: 0.1,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.7,
       sizeAttenuation: true,
       depthWrite: false,
+      blending: THREE.AdditiveBlending,
     });
 
     this.points = new THREE.Points(geo, mat);
@@ -74,6 +80,7 @@ export class ParticleSystem {
     vy?: number;
     vz?: number;
     color?: THREE.Color;
+    gravity?: boolean;
   }) {
     const cfg = config ?? {};
     let emitted = 0;
@@ -86,11 +93,13 @@ export class ParticleSystem {
         p.x = x + (Math.random() - 0.5) * (cfg.spreadX ?? 0.1);
         p.y = y + (Math.random() - 0.5) * (cfg.spreadY ?? 0.1);
         p.z = z + (Math.random() - 0.5) * (cfg.spreadZ ?? 0.1);
-        p.vx = (cfg.vx ?? 0) + (Math.random() - 0.5) * 0.2;
-        p.vy = (cfg.vy ?? 0) + Math.random() * 0.1;
-        p.vz = (cfg.vz ?? 0) + (Math.random() - 0.5) * 0.2;
-        p.alpha = cfg.alpha ?? 0.6;
-        p.size = cfg.size ?? 0.08;
+        p.vx = (cfg.vx ?? 0) + (Math.random() - 0.5) * 0.3;
+        p.vy = (cfg.vy ?? 0) + Math.random() * 0.15;
+        p.vz = (cfg.vz ?? 0) + (Math.random() - 0.5) * 0.3;
+        p.alpha = cfg.alpha ?? 0.7;
+        p.size = cfg.size ?? 0.1;
+        p.startSize = p.size;
+        p.gravity = cfg.gravity ?? false;
         emitted++;
       }
     }
@@ -115,18 +124,28 @@ export class ParticleSystem {
         continue;
       }
 
+      // Apply gravity if enabled
+      if (p.gravity) {
+        p.vy += GRAVITY * dt * 0.3;
+      }
+
       // Update position
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.z += p.vz * dt;
 
-      // Fade alpha
+      // Life ratio
       const life = 1 - p.age / p.lifetime;
-      const currentAlpha = p.alpha * life;
+
+      // Fade alpha with smooth ease-out
+      const currentAlpha = p.alpha * life * life;
+
+      // Shrink size over lifetime
+      const currentSize = p.startSize * (0.3 + 0.7 * life);
 
       this.positionAttr.setXYZ(i, p.x, p.y, p.z);
       this.alphaAttr.setX(i, currentAlpha);
-      this.sizeAttr.setX(i, p.size);
+      this.sizeAttr.setX(i, currentSize);
     }
 
     this.positionAttr.needsUpdate = true;

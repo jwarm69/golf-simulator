@@ -15,14 +15,34 @@ const WATER_VERTEX_SHADER = `
   uniform float uTime;
   varying vec2 vUv;
   varying float vWaveHeight;
+  varying vec3 vWorldPos;
+  varying vec3 vNormal;
   void main() {
     vUv = uv;
     vec3 pos = position;
-    float wave = sin(pos.x * 3.0 + uTime * 2.0) * 0.08
-               + sin(pos.y * 4.0 + uTime * 1.5) * 0.06
-               + sin((pos.x + pos.y) * 2.0 + uTime * 3.0) * 0.04;
+
+    // Multi-octave wave displacement
+    float wave1 = sin(pos.x * 3.0 + uTime * 2.0) * 0.08;
+    float wave2 = sin(pos.y * 4.0 + uTime * 1.5) * 0.06;
+    float wave3 = sin((pos.x + pos.y) * 2.0 + uTime * 3.0) * 0.04;
+    float wave4 = sin(pos.x * 8.0 + pos.y * 6.0 + uTime * 4.5) * 0.02;
+    float wave5 = sin(pos.x * 12.0 - pos.y * 10.0 + uTime * 5.0) * 0.01;
+    float wave = wave1 + wave2 + wave3 + wave4 + wave5;
     pos.z += wave;
     vWaveHeight = wave;
+
+    // Compute tangent-space normal from wave derivatives
+    float dx = cos(pos.x * 3.0 + uTime * 2.0) * 3.0 * 0.08
+             + cos((pos.x + pos.y) * 2.0 + uTime * 3.0) * 2.0 * 0.04
+             + cos(pos.x * 8.0 + pos.y * 6.0 + uTime * 4.5) * 8.0 * 0.02
+             + cos(pos.x * 12.0 - pos.y * 10.0 + uTime * 5.0) * 12.0 * 0.01;
+    float dy = cos(pos.y * 4.0 + uTime * 1.5) * 4.0 * 0.06
+             + cos((pos.x + pos.y) * 2.0 + uTime * 3.0) * 2.0 * 0.04
+             + cos(pos.x * 8.0 + pos.y * 6.0 + uTime * 4.5) * 6.0 * 0.02
+             - cos(pos.x * 12.0 - pos.y * 10.0 + uTime * 5.0) * 10.0 * 0.01;
+    vNormal = normalize(vec3(-dx, -dy, 1.0));
+
+    vWorldPos = (modelMatrix * vec4(pos, 1.0)).xyz;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
 `;
@@ -31,20 +51,123 @@ const WATER_FRAGMENT_SHADER = `
   uniform float uTime;
   varying vec2 vUv;
   varying float vWaveHeight;
+  varying vec3 vWorldPos;
+  varying vec3 vNormal;
+
   void main() {
-    vec3 deepBlue = vec3(0.15, 0.35, 0.55);
-    vec3 lightBlue = vec3(0.3, 0.6, 0.85);
-    float t = smoothstep(-0.1, 0.1, vWaveHeight);
-    vec3 color = mix(deepBlue, lightBlue, t);
+    vec3 deepBlue = vec3(0.08, 0.22, 0.42);
+    vec3 midBlue = vec3(0.15, 0.38, 0.60);
+    vec3 lightBlue = vec3(0.35, 0.65, 0.90);
+    vec3 foamWhite = vec3(0.85, 0.92, 0.98);
+
+    // Color gradient based on wave height
+    float t = smoothstep(-0.12, 0.12, vWaveHeight);
+    vec3 color = mix(deepBlue, midBlue, t);
+    color = mix(color, lightBlue, smoothstep(0.05, 0.15, vWaveHeight));
+
+    // Foam on wave crests
+    float foam = smoothstep(0.10, 0.14, vWaveHeight) * 0.4;
+    color = mix(color, foamWhite, foam);
+
     // Fresnel-like edge brightening
     float edge = pow(1.0 - abs(vUv.x - 0.5) * 2.0, 0.3) * pow(1.0 - abs(vUv.y - 0.5) * 2.0, 0.3);
-    color += vec3(0.1, 0.15, 0.2) * (1.0 - edge);
-    // Subtle shimmer
-    float shimmer = sin(vUv.x * 20.0 + uTime * 4.0) * sin(vUv.y * 20.0 + uTime * 3.0) * 0.05;
+    color += vec3(0.08, 0.12, 0.18) * (1.0 - edge);
+
+    // Caustic-like shimmer pattern
+    float shimmer1 = sin(vUv.x * 30.0 + uTime * 4.0) * sin(vUv.y * 30.0 + uTime * 3.0);
+    float shimmer2 = sin(vUv.x * 22.0 - uTime * 2.5) * sin(vUv.y * 18.0 + uTime * 3.5);
+    float shimmer = (shimmer1 + shimmer2 * 0.5) * 0.04;
     color += shimmer;
-    gl_FragColor = vec4(color, 0.75);
+
+    // Specular highlight approximation
+    vec3 viewDir = normalize(cameraPosition - vWorldPos);
+    vec3 lightDir = normalize(vec3(30.0, 50.0, 20.0));
+    vec3 halfDir = normalize(viewDir + lightDir);
+    float spec = pow(max(dot(vNormal, halfDir), 0.0), 64.0);
+    color += vec3(1.0, 0.95, 0.85) * spec * 0.6;
+
+    gl_FragColor = vec4(color, 0.78);
   }
 `;
+
+/** Generate a procedural grass normal map on a canvas */
+function createGrassNormalMap(resolution: number, bladeScale: number): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = resolution;
+  canvas.height = resolution;
+  const ctx = canvas.getContext('2d')!;
+  const imageData = ctx.createImageData(resolution, resolution);
+  const data = imageData.data;
+
+  for (let y = 0; y < resolution; y++) {
+    for (let x = 0; x < resolution; x++) {
+      const i = (y * resolution + x) * 4;
+      const u = x / resolution;
+      const v = y / resolution;
+
+      // Procedural blade-like bumps
+      const blade1 = Math.sin(u * bladeScale) * Math.cos(v * bladeScale * 0.7);
+      const blade2 = Math.sin(u * bladeScale * 1.3 + 1.7) * Math.cos(v * bladeScale * 0.5 + 2.3);
+      const blade3 = Math.sin(u * bladeScale * 2.1 + 3.1) * Math.cos(v * bladeScale * 1.8 + 0.5);
+
+      // Compute normal from height derivatives
+      const nx = (blade1 * 0.4 + blade2 * 0.3 + blade3 * 0.15);
+      const ny = (blade1 * 0.3 + blade2 * 0.4 + blade3 * 0.2);
+
+      // Encode as RGB (tangent-space normal map: R=x, G=y, B=z)
+      data[i]     = Math.floor((nx * 0.5 + 0.5) * 255); // R
+      data[i + 1] = Math.floor((ny * 0.5 + 0.5) * 255); // G
+      data[i + 2] = Math.floor(0.85 * 255);              // B (mostly pointing up)
+      data[i + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(8, 8);
+  return tex;
+}
+
+/** Generate a procedural grass color texture */
+function createGrassTexture(resolution: number, baseColor: number, variation: number): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = resolution;
+  canvas.height = resolution;
+  const ctx = canvas.getContext('2d')!;
+  const imageData = ctx.createImageData(resolution, resolution);
+  const data = imageData.data;
+
+  const r = ((baseColor >> 16) & 0xff) / 255;
+  const g = ((baseColor >> 8) & 0xff) / 255;
+  const b = (baseColor & 0xff) / 255;
+
+  for (let y = 0; y < resolution; y++) {
+    for (let x = 0; x < resolution; x++) {
+      const i = (y * resolution + x) * 4;
+      const u = x / resolution;
+      const v = y / resolution;
+
+      // Blade pattern for color variation
+      const blade = Math.sin(u * 60) * 0.5 + 0.5;
+      const noise = (Math.sin(u * 123.45 + v * 67.89) * 43758.5453 % 1);
+      const vary = (blade * 0.6 + noise * 0.4) * variation;
+
+      data[i]     = Math.min(255, Math.floor((r + vary * 0.03) * 255));
+      data[i + 1] = Math.min(255, Math.floor((g + vary * 0.06) * 255));
+      data[i + 2] = Math.min(255, Math.floor((b + vary * 0.02) * 255));
+      data[i + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(8, 8);
+  return tex;
+}
 
 export class Terrain {
   private scene: THREE.Scene;
@@ -54,25 +177,42 @@ export class Terrain {
   private zoneBounds: ZoneBounds[] = [];
   private waterMaterials: THREE.ShaderMaterial[] = [];
   private zoneColors: Record<ZoneType, number> = { ...ZONE_COLORS };
+  private grassNormalMap: THREE.CanvasTexture;
+  private grassTextures: Map<number, THREE.CanvasTexture> = new Map();
 
   constructor(scene: THREE.Scene, physics: PhysicsWorld) {
     this.scene = scene;
     this.physics = physics;
+    this.grassNormalMap = createGrassNormalMap(256, 40);
   }
 
   setZoneColors(colors: Record<ZoneType, number>) {
     this.zoneColors = colors;
   }
 
+  private getGrassTexture(color: number): THREE.CanvasTexture {
+    if (!this.grassTextures.has(color)) {
+      this.grassTextures.set(color, createGrassTexture(256, color, 1.0));
+    }
+    return this.grassTextures.get(color)!;
+  }
+
+  private createGrassMaterial(color: number, roughness: number): THREE.MeshStandardMaterial {
+    return new THREE.MeshStandardMaterial({
+      map: this.getGrassTexture(color),
+      normalMap: this.grassNormalMap,
+      normalScale: new THREE.Vector2(0.6, 0.6),
+      roughness,
+    });
+  }
+
   buildFromCourse(course: CourseData) {
     this.clear();
+    this.grassTextures.clear();
 
     // Large base ground plane (rough)
     const baseGeo = new THREE.PlaneGeometry(200, 200);
-    const baseMat = new THREE.MeshStandardMaterial({
-      color: this.zoneColors.rough,
-      roughness: 0.9,
-    });
+    const baseMat = this.createGrassMaterial(this.zoneColors.rough, 0.9);
     const baseMesh = new THREE.Mesh(baseGeo, baseMat);
     baseMesh.rotation.x = -Math.PI / 2;
     baseMesh.position.y = -0.01;
@@ -100,13 +240,19 @@ export class Terrain {
       mesh = this.createWaterMesh(zone);
     } else if (zone.shape === 'rect' && zone.size) {
       const geo = new THREE.PlaneGeometry(zone.size.width, zone.size.height);
-      const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.8 });
+      const isGrass = zone.type !== 'sand';
+      const mat = isGrass
+        ? this.createGrassMaterial(color, 0.8)
+        : new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
       mesh = new THREE.Mesh(geo, mat);
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(zone.position.x, 0.005, zone.position.z);
     } else if (zone.shape === 'circle' && zone.radius) {
       const geo = new THREE.CircleGeometry(zone.radius, 32);
-      const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.8 });
+      const isGrass = zone.type !== 'sand';
+      const mat = isGrass
+        ? this.createGrassMaterial(color, 0.8)
+        : new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
       mesh = new THREE.Mesh(geo, mat);
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(zone.position.x, 0.005, zone.position.z);
@@ -142,24 +288,19 @@ export class Terrain {
 
     let mesh: THREE.Mesh;
     if (zone.shape === 'rect' && zone.size) {
-      const geo = new THREE.PlaneGeometry(zone.size.width, zone.size.height, 16, 16);
+      const geo = new THREE.PlaneGeometry(zone.size.width, zone.size.height, 32, 32);
       mesh = new THREE.Mesh(geo, waterMat);
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(zone.position.x, 0.01, zone.position.z);
     } else if (zone.shape === 'circle' && zone.radius) {
-      const geo = new THREE.CircleGeometry(zone.radius, 32, 0, Math.PI * 2);
-      // Subdivide for wave effect — use a plane and clip via shape
-      const planeGeo = new THREE.PlaneGeometry(zone.radius * 2, zone.radius * 2, 16, 16);
-      mesh = new THREE.Mesh(planeGeo, waterMat);
+      mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(zone.radius * 2, zone.radius * 2, 32, 32),
+        waterMat
+      );
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(zone.position.x, 0.01, zone.position.z);
-      planeGeo.dispose(); // we'll use the circle approach instead
-      // Actually let's use a circle with enough segments
-      const circleGeo = new THREE.CircleGeometry(zone.radius, 32);
-      // CircleGeometry doesn't have radial segments for displacement, use PlaneGeometry clipped
-      mesh.geometry = new THREE.PlaneGeometry(zone.radius * 2, zone.radius * 2, 16, 16);
     } else {
-      const geo = new THREE.PlaneGeometry(4, 4, 16, 16);
+      const geo = new THREE.PlaneGeometry(4, 4, 32, 32);
       mesh = new THREE.Mesh(geo, waterMat);
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(zone.position.x, 0.01, zone.position.z);
@@ -188,64 +329,90 @@ export class Terrain {
     let trunkRadiusTop = 0.15;
     let trunkRadiusBottom = 0.2;
     let trunkHeight = 2;
-    let foliageGeo: THREE.BufferGeometry = new THREE.ConeGeometry(1.5, 3, 8);
+    let foliageType: 'cone' | 'sphere' = 'cone';
+    let foliageRadius = 1.5;
+    let foliageHeight = 3;
     let foliageY = 3.5;
+    let numFoliageLayers = 1;
 
     switch (theme) {
       case 'desert':
-        // Cactus shape: tall narrow cylinder + sphere top
         trunkColor = 0x2d6b2d;
         trunkRadiusTop = 0.2;
         trunkRadiusBottom = 0.25;
         trunkHeight = 3;
-        foliageGeo = new THREE.SphereGeometry(0.4, 8, 8);
+        foliageType = 'sphere';
+        foliageRadius = 0.4;
         foliageY = 3.7;
         foliageColor = 0x3d8b3d;
         break;
       case 'arctic':
-        // Snow-covered tree: white foliage
         foliageColor = 0xe8e8f0;
+        numFoliageLayers = 2;
         break;
       case 'volcanic':
-        // Charred tree: dark brown/black
         trunkColor = 0x2a1a0a;
         foliageColor = 0x1a1a1a;
         break;
       case 'tropical':
-        // Palm tree: tall thin trunk + sphere crown
         trunkRadiusTop = 0.1;
         trunkRadiusBottom = 0.15;
         trunkHeight = 3.5;
-        foliageGeo = new THREE.SphereGeometry(1.2, 8, 8);
+        foliageType = 'sphere';
+        foliageRadius = 1.2;
         foliageY = 4.5;
         foliageColor = 0x1d8a1d;
+        numFoliageLayers = 2;
         break;
       case 'canyon':
-        // Sparse desert scrub: short
         trunkHeight = 1;
-        foliageGeo = new THREE.SphereGeometry(0.8, 6, 6);
+        foliageType = 'sphere';
+        foliageRadius = 0.8;
         foliageY = 1.6;
         foliageColor = 0x6b8b3d;
         trunkColor = 0x6b4513;
         break;
+      default:
+        numFoliageLayers = 2;
+        break;
     }
 
-    // Trunk
-    const trunkGeo = new THREE.CylinderGeometry(trunkRadiusTop, trunkRadiusBottom, trunkHeight, 8);
+    // Trunk with higher segment count
+    const trunkGeo = new THREE.CylinderGeometry(trunkRadiusTop, trunkRadiusBottom, trunkHeight, 12);
     const trunkMat = new THREE.MeshStandardMaterial({ color: trunkColor, roughness: 0.9 });
     const trunk = new THREE.Mesh(trunkGeo, trunkMat);
     trunk.position.set(pos.x, trunkHeight / 2, pos.z);
     trunk.castShadow = true;
+    trunk.receiveShadow = true;
     this.scene.add(trunk);
     this.meshes.push(trunk);
 
-    // Foliage
-    const foliageMat = new THREE.MeshStandardMaterial({ color: foliageColor, roughness: 0.8 });
-    const foliage = new THREE.Mesh(foliageGeo, foliageMat);
-    foliage.position.set(pos.x, foliageY, pos.z);
-    foliage.castShadow = true;
-    this.scene.add(foliage);
-    this.meshes.push(foliage);
+    // Foliage layers
+    for (let layer = 0; layer < numFoliageLayers; layer++) {
+      const layerScale = 1 - layer * 0.3;
+      const layerY = foliageY + layer * foliageHeight * 0.5;
+      let geo: THREE.BufferGeometry;
+
+      if (foliageType === 'cone') {
+        geo = new THREE.ConeGeometry(foliageRadius * layerScale, foliageHeight * layerScale, 12);
+      } else {
+        geo = new THREE.SphereGeometry(foliageRadius * layerScale, 12, 12);
+      }
+
+      const shade = layer * 0.08;
+      const fr = Math.min(255, ((foliageColor >> 16) & 0xff) + shade * 255);
+      const fg = Math.min(255, ((foliageColor >> 8) & 0xff) + shade * 255);
+      const fb = Math.min(255, (foliageColor & 0xff) + shade * 255);
+      const layerColor = (Math.floor(fr) << 16) | (Math.floor(fg) << 8) | Math.floor(fb);
+
+      const foliageMat = new THREE.MeshStandardMaterial({ color: layerColor, roughness: 0.75 });
+      const foliage = new THREE.Mesh(geo, foliageMat);
+      foliage.position.set(pos.x, layerY, pos.z);
+      foliage.castShadow = true;
+      foliage.receiveShadow = true;
+      this.scene.add(foliage);
+      this.meshes.push(foliage);
+    }
 
     // Physics body (simple cylinder)
     const treeBody = new CANNON.Body({ mass: 0 });
@@ -276,7 +443,8 @@ export class Terrain {
         break;
     }
 
-    const rockGeo = new THREE.DodecahedronGeometry(0.6, 0);
+    // Higher detail rock geometry
+    const rockGeo = new THREE.DodecahedronGeometry(0.6, 1);
     const rockMat = new THREE.MeshStandardMaterial({
       color: rockColor,
       roughness: theme === 'volcanic' ? 0.3 : 0.95,
@@ -285,6 +453,7 @@ export class Terrain {
     const rock = new THREE.Mesh(rockGeo, rockMat);
     rock.position.set(pos.x, 0.4, pos.z);
     rock.castShadow = true;
+    rock.receiveShadow = true;
     this.scene.add(rock);
     this.meshes.push(rock);
 
