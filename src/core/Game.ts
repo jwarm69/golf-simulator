@@ -12,6 +12,7 @@ import { TrajectoryPreview } from '../game/TrajectoryPreview';
 import { CourseLoader } from '../game/CourseLoader';
 import { WindSystem } from '../game/WindSystem';
 import { SpinSystem } from '../game/SpinSystem';
+import { PuttingGuide } from '../game/PuttingGuide';
 import { MultiplayerManager } from '../game/MultiplayerManager';
 import { BallTrail } from '../effects/BallTrail';
 import { LandingEffect } from '../effects/LandingEffect';
@@ -19,7 +20,7 @@ import { HUD, HoleOption } from '../ui/HUD';
 import { Minimap } from '../ui/Minimap';
 import {
   GameState, CourseData, BALL_RADIUS, ZONE_PHYSICS, CLUBS, DEFAULT_CLUB_INDEX, ClubData,
-  ThemeName, THEME_COLORS, ZONE_COLORS,
+  ThemeName, THEME_COLORS, ZONE_COLORS, AUTO_PUTTER_DISTANCE,
 } from '../types';
 
 const HOLES: HoleOption[] = [
@@ -80,6 +81,9 @@ export class Game {
   private ballTrail: BallTrail;
   private landingEffect: LandingEffect;
 
+  // Putting guide
+  private puttingGuide: PuttingGuide;
+
   // Multiplayer
   private multiplayer: MultiplayerManager;
   private touchSpinDrawHeld = false;
@@ -117,6 +121,9 @@ export class Game {
     // Effects
     this.ballTrail = new BallTrail(this.renderer.scene);
     this.landingEffect = new LandingEffect(this.renderer.scene);
+
+    // Putting guide
+    this.puttingGuide = new PuttingGuide(this.renderer.scene);
 
     // Multiplayer
     this.multiplayer = new MultiplayerManager();
@@ -340,6 +347,14 @@ export class Game {
     );
     this.trajectoryPreview.setVisible(true);
 
+    // Show putting guide on green with putter
+    const zone = this.terrain.getZoneAtPosition(ballPos.x, ballPos.z);
+    const onGreenWithPutter = zone === 'green' && this.clubIndex === 7;
+    this.puttingGuide.setVisible(onGreenWithPutter);
+    if (onGreenWithPutter) {
+      this.puttingGuide.update(ballPos, orbitAngle, null);
+    }
+
     // Spacebar to start charging
     if (this.input.consumeSpacePress()) {
       this.state = 'power';
@@ -372,6 +387,14 @@ export class Game {
     );
     this.trajectoryPreview.setVisible(true);
 
+    // Update putting guide during power charge
+    const powerZone = this.terrain.getZoneAtPosition(ballPos.x, ballPos.z);
+    const onGreenPutting = powerZone === 'green' && this.clubIndex === 7;
+    this.puttingGuide.setVisible(onGreenPutting);
+    if (onGreenPutting) {
+      this.puttingGuide.update(ballPos, orbitAngle, this.shotController.power);
+    }
+
     // Release spacebar to shoot
     if (this.input.consumeSpaceRelease()) {
       const shot = this.shotController.releaseShot();
@@ -397,6 +420,7 @@ export class Game {
   private updateRolling(dt: number) {
     this.hud.showAimHint(false);
     this.trajectoryPreview.setVisible(false);
+    this.puttingGuide.setVisible(false);
 
     const ballPos = this.ball.getPosition();
 
@@ -471,7 +495,28 @@ export class Game {
       }
     }
 
+    this.checkAutoPutter();
     this.state = 'aiming';
+  }
+
+  private checkAutoPutter() {
+    const ballPos = this.ball.getPosition();
+    const zone = this.terrain.getZoneAtPosition(ballPos.x, ballPos.z);
+    const holePos = this.holePin.getPosition();
+    const dist = Math.sqrt((ballPos.x - holePos.x) ** 2 + (ballPos.z - holePos.z) ** 2);
+    const PUTTER_INDEX = 7;
+
+    if (zone === 'green' && dist <= AUTO_PUTTER_DISTANCE && this.clubIndex !== PUTTER_INDEX) {
+      this.clubIndex = PUTTER_INDEX;
+      this.currentClub = CLUBS[PUTTER_INDEX];
+      this.shotController.setClub(this.currentClub);
+      const g = 9.82;
+      const maxDist = Math.round(
+        (this.currentClub.maxSpeed ** 2 * Math.sin(2 * this.currentClub.loftAngle)) / g
+      );
+      this.hud.setClub(this.currentClub.name, maxDist);
+      this.hud.showAutoClubHint(this.currentClub.name);
+    }
   }
 
   private updateHoled(_dt: number) {

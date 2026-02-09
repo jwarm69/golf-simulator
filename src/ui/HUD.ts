@@ -27,6 +27,7 @@ export class HUD {
   private windSpeed!: HTMLElement;
   private spinEl!: HTMLElement;
   private turnBanner!: HTMLElement;
+  private autoClubHint!: HTMLElement;
   private multiplayerSetupOverlay!: HTMLElement;
   private roundSummaryOverlay!: HTMLElement;
 
@@ -144,6 +145,11 @@ export class HUD {
     this.turnBanner = document.createElement('div');
     this.turnBanner.className = 'turn-banner';
     this.container.appendChild(this.turnBanner);
+
+    // Auto-club hint
+    this.autoClubHint = document.createElement('div');
+    this.autoClubHint.className = 'auto-club-hint';
+    this.container.appendChild(this.autoClubHint);
 
     // Club display with buttons (visible on all devices)
     const clubRow = document.createElement('div');
@@ -312,6 +318,12 @@ export class HUD {
 
   hideTurnBanner() {
     this.turnBanner.classList.remove('visible');
+  }
+
+  showAutoClubHint(clubName: string) {
+    this.autoClubHint.textContent = `Auto-switched to ${clubName}`;
+    this.autoClubHint.classList.add('visible');
+    setTimeout(() => this.autoClubHint.classList.remove('visible'), 2000);
   }
 
   setScorecard(scores: { hole: string; strokes: number; par: number }[]) {
