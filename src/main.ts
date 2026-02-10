@@ -46,13 +46,23 @@ const createStartupError = (message: string, onRetry: () => void) => {
   document.body.appendChild(overlay);
 };
 
+const loadingOverlay = document.getElementById('loading-overlay');
+
+const dismissLoading = () => {
+  if (!loadingOverlay) return;
+  loadingOverlay.classList.add('fade-out');
+  loadingOverlay.addEventListener('transitionend', () => loadingOverlay.remove(), { once: true });
+};
+
 const boot = async () => {
   try {
     await game.loadCourse('/courses/course-01.json');
+    dismissLoading();
     game.start();
     game.showHoleSelection();
   } catch (error) {
     console.error('Initial course load failed', error);
+    if (loadingOverlay) loadingOverlay.remove();
     createStartupError('Could not load course data. Check deployment assets and try again.', () => {
       void boot();
     });

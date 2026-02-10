@@ -7,6 +7,13 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { GammaCorrectionShader } from 'three/addons/shaders/GammaCorrectionShader.js';
 import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 
+type QualityTier = 'high' | 'low';
+
+function detectQuality(): QualityTier {
+  const isMobile = navigator.maxTouchPoints > 0 || window.innerWidth < 768;
+  return isMobile ? 'low' : 'high';
+}
+
 export class Renderer {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -14,8 +21,14 @@ export class Renderer {
   private sky: Sky;
   private sunPosition = new THREE.Vector3();
   private composer: EffectComposer;
+  private canvas: HTMLCanvasElement;
+  private quality: QualityTier;
+  private contextLostOverlay: HTMLElement | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
+    this.canvas = canvas;
+    this.quality = detectQuality();
+
     this.scene = new THREE.Scene();
     this.scene.fog = null;
 
@@ -28,11 +41,15 @@ export class Renderer {
     this.camera.position.set(0, 10, 15);
     this.camera.lookAt(0, 0, 0);
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    const antialias = this.quality === 'high';
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
+    const maxPixelRatio = this.quality === 'low' ? 1.5 : 3;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = this.quality === 'low'
+      ? THREE.BasicShadowMap
+      : THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.5;
 
@@ -67,6 +84,15 @@ export class Renderer {
     this.setupLighting();
 
     window.addEventListener('resize', () => this.onResize());
+
+    // WebGL context loss handling
+    canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      this.onContextLost();
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      this.onContextRestored();
+    });
   }
 
   private setupSky(): Sky {
@@ -99,11 +125,12 @@ export class Renderer {
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d6e3f, 0.6);
     this.scene.add(hemiLight);
 
+    const shadowSize = this.quality === 'low' ? 1024 : 4096;
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
     dirLight.position.set(30, 50, 20);
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 4096;
-    dirLight.shadow.mapSize.height = 4096;
+    dirLight.shadow.mapSize.width = shadowSize;
+    dirLight.shadow.mapSize.height = shadowSize;
     dirLight.shadow.camera.near = 0.5;
     dirLight.shadow.camera.far = 150;
     dirLight.shadow.camera.left = -60;
@@ -123,6 +150,36 @@ export class Renderer {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.composer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  private onContextLost() {
+    if (this.contextLostOverlay) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'context-lost-overlay';
+
+    const text = document.createElement('div');
+    text.className = 'context-lost-text';
+    text.textContent = 'Restoring graphics…';
+    overlay.appendChild(text);
+
+    const sub = document.createElement('div');
+    sub.className = 'context-lost-sub';
+    sub.textContent = 'Please wait';
+    overlay.appendChild(sub);
+
+    document.body.appendChild(overlay);
+    this.contextLostOverlay = overlay;
+  }
+
+  private onContextRestored() {
+    // Three.js automatically restores the WebGL state on context restore,
+    // but we need to re-trigger shadow map and tone mapping setup
+    this.renderer.shadowMap.needsUpdate = true;
+
+    if (this.contextLostOverlay) {
+      this.contextLostOverlay.remove();
+      this.contextLostOverlay = null;
+    }
   }
 
   render() {

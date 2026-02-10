@@ -299,10 +299,9 @@ export class Terrain {
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(zone.position.x, 0.01, zone.position.z);
     } else if (zone.shape === 'circle' && zone.radius) {
-      mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(zone.radius * 2, zone.radius * 2, 32, 32),
-        waterMat
-      );
+      // Use a subdivided PlaneGeometry for wave displacement (CircleGeometry lacks radial segments)
+      const geo = new THREE.PlaneGeometry(zone.radius * 2, zone.radius * 2, 32, 32);
+      mesh = new THREE.Mesh(geo, waterMat);
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(zone.position.x, 0.01, zone.position.z);
     } else {
