@@ -844,23 +844,31 @@ body {
     justify-content: center;
   }
 
-  /* Hide desktop aim hint — mobile gets its own shorter version */
+  /* Hide clutter on mobile: aim hint, spin controls, sponsor bar */
   .aim-hint {
-    font-size: 12px;
-    white-space: normal;
-    text-align: center;
-    max-width: 70vw;
-    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+    display: none;
   }
 
-  /* Power meter: fluid width */
+  .spin-indicator {
+    display: none;
+  }
+
+  .spin-controls {
+    display: none;
+  }
+
+  .sponsor-bar {
+    display: none;
+  }
+
+  /* Power meter: fluid width, positioned near bottom */
   .power-meter-container {
     width: min(60vw, 300px);
-    bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
   .power-meter-label {
-    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(42px + env(safe-area-inset-bottom, 0px));
     font-size: 13px;
   }
 
@@ -871,36 +879,16 @@ body {
     font-size: 20px;
   }
 
+  /* Club row: moved down now that spin controls are gone */
   .club-row {
-    bottom: calc(148px + env(safe-area-inset-bottom, 0px));
-  }
-
-  /* Spin: compact positioning */
-  .spin-indicator {
-    bottom: calc(214px + env(safe-area-inset-bottom, 0px));
-    font-size: 14px;
-  }
-
-  .spin-controls {
-    position: absolute;
-    bottom: calc(186px + env(safe-area-inset-bottom, 0px));
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 10px;
-  }
-
-  .spin-btn {
-    padding: 12px 18px;
-    font-size: 14px;
-    min-width: 70px;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Shot button: large, easy-to-reach touch target */
   .shot-hold-btn {
     position: absolute;
     right: calc(14px + env(safe-area-inset-right, 0px));
-    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
     display: block;
     padding: 16px 20px;
     font-size: 14px;
@@ -931,10 +919,11 @@ body {
 
   /* Minimap: smaller on touch */
   .minimap-canvas {
-    width: 120px;
-    height: 120px;
+    width: 100px;
+    height: 100px;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     left: calc(12px + env(safe-area-inset-left, 0px));
+    opacity: 0.7;
   }
 
   /* Scorecard: readable on mobile */
@@ -971,12 +960,6 @@ body {
 
   .center-message .sub {
     font-size: 15px;
-  }
-
-  /* Sponsor bar with safe area */
-  .sponsor-bar {
-    bottom: calc(4px + env(safe-area-inset-bottom, 0px));
-    font-size: 10px;
   }
 
   /* Turn banner */
@@ -1042,22 +1025,8 @@ body {
    ============================================ */
 @media (max-height: 500px) {
   /* Compact everything vertically */
-  .spin-indicator {
-    bottom: calc(140px + env(safe-area-inset-bottom, 0px));
-    font-size: 11px;
-  }
-
-  .spin-controls {
-    bottom: calc(118px + env(safe-area-inset-bottom, 0px));
-  }
-
-  .spin-btn {
-    padding: 8px 14px;
-    font-size: 12px;
-  }
-
   .club-row {
-    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   }
 
   .club-btn {
@@ -1072,29 +1041,24 @@ body {
   }
 
   .power-meter-container {
-    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     height: 16px;
   }
 
   .power-meter-label {
-    bottom: calc(40px + env(safe-area-inset-bottom, 0px));
-    font-size: 11px;
-  }
-
-  .aim-hint {
-    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(32px + env(safe-area-inset-bottom, 0px));
     font-size: 11px;
   }
 
   .shot-hold-btn {
-    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(48px + env(safe-area-inset-bottom, 0px));
     padding: 10px 14px;
     font-size: 12px;
   }
 
   .minimap-canvas {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
   }
 
   .center-message {
